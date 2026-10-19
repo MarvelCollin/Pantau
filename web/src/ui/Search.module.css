@@ -155,9 +155,7 @@
 
 .label {
   font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .hint {
@@ -174,6 +172,14 @@
 @media (max-width: 900px) {
   .input {
     font-size: 16px;
+  }
+
+  .panel {
+    position: fixed;
+    top: calc(var(--topbar-h) + var(--space-1));
+    left: var(--space-2);
+    right: var(--space-2);
+    max-height: calc(100dvh - var(--topbar-h) - var(--space-4));
   }
 }
 
