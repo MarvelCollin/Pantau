@@ -22,7 +22,16 @@ export interface ViewState {
   bounds: [number, number, number, number]
 }
 
+export interface AirportFilter {
+  code: string
+  label: string
+}
+
 interface Store {
+  airportFilter: AirportFilter | null
+  followFlight: boolean
+  setFollowFlight: (follow: boolean) => void
+  setAirportFilter: (filter: AirportFilter | null) => void
   theme: ThemeName
   enabled: LayerId[]
   selection: Selection
@@ -86,6 +95,10 @@ export const useStore = create<Store>((set, get) => ({
   status: {},
   view: null,
   flyTo: null,
+  airportFilter: null,
+  followFlight: false,
+  setFollowFlight: (followFlight) => set({ followFlight }),
+  setAirportFilter: (airportFilter) => set({ airportFilter }),
   setTheme: (theme) => {
     localStorage.setItem('pantau-theme', theme)
     applyTheme(theme)
@@ -99,7 +112,7 @@ export const useStore = create<Store>((set, get) => ({
     writeUrl(next, keepSelection)
   },
   select: (selection) => {
-    set({ selection })
+    set({ selection, followFlight: false })
     writeUrl(get().enabled, selection)
   },
   setStatus: (id, status) => {

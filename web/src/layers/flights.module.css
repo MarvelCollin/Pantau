@@ -76,3 +76,40 @@
   font-size: var(--text-xs);
   color: var(--muted);
 }
+
+.phase {
+  font-weight: 600;
+  color: var(--strong);
+}
+
+.eta {
+  font-size: var(--text-md);
+}
+
+.lost {
+  font-size: var(--text-sm);
+  color: var(--warning);
+  font-weight: 500;
+}
+
+.follow {
+  align-self: flex-start;
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--strong);
+  font-weight: 600;
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+
+.follow:hover {
+  background: var(--tint);
+}
+
+.follow[aria-pressed='true'] {
+  background: var(--strong);
+  border-color: var(--strong);
+  color: var(--bg);
+}

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Feature, FeatureCollection } from 'geojson'
 import { getEnvelope, getJson, type Envelope } from '../lib/api'
-import { formatCoord, formatNumber } from '../lib/format'
+import { formatAgo, formatClock, formatCoord, formatNumber } from '../lib/format'
 import { useLayerOn, useStore } from '../state/store'
 import { useMapLayer } from '../map/useMapLayer'
 import { usePalette } from '../map/usePalette'
@@ -11,7 +11,8 @@ import { useLayerStatus } from './useLayerStatus'
 import { TrailBook, distanceKm, greatCircle, lineCoords } from './trails'
 import { DetailHeader, ExternalLink, Facts, Gone, Lead, Section } from '../ui/Detail'
 import styles from './flights.module.css'
-import { airlineName } from './airlines'
+import { airlineName, flightNumber } from './airlines'
+import { useMap } from '../map/context'
 
 export interface Flight {
   hex: string
@@ -29,6 +30,25 @@ export interface Flight {
   emergency?: string
   military: boolean
   seen: number
+  route?: { from: RouteAirport; to: RouteAirport; stops: number }
+}
+
+export interface RouteAirport {
+  code: string
+  iata?: string
+  name: string
+  city: string
+  country: string
+  lat: number
+  lon: number
+}
+
+export function routeLabel(f: Flight): string | undefined {
+  return f.route ? `${f.route.from.city} to ${f.route.to.city}` : undefined
+}
+
+export function servesAirport(f: Flight, code: string): boolean {
+  return f.route?.from.code === code || f.route?.to.code === code
 }
 
 interface Airport {
@@ -116,6 +136,21 @@ function useRoute(callsign?: string) {
   })
 }
 
+function airportOf(a: RouteAirport): Airport {
+  return { iata_code: a.iata, icao_code: a.code, name: a.name, municipality: a.city, country_name: a.country, latitude: a.lat, longitude: a.lon }
+}
+
+function resolveRoute(f: Flight | undefined, fallback: Route | null | undefined): Route | undefined {
+  if (!f) return undefined
+  if (f.route) {
+    const name = f.callsign ? airlineName(f.callsign) : undefined
+    return { airline: fallback?.airline ?? (name ? { name } : undefined), origin: airportOf(f.route.from), destination: airportOf(f.route.to) }
+  }
+  return fallback ?? undefined
+}
+
+const lastSeen = new Map<string, { flight: Flight; at: number }>()
+
 function usePhoto(hex: string) {
   return useQuery({
     queryKey: ['photo', hex],
@@ -135,9 +170,13 @@ function FlightsLayer() {
   const [tick, setTick] = useState(() => Date.now())
   const env = query.data
   const selectedFlight = selected ? env?.items.find((f) => f.hex === selected) : undefined
-  const route = useRoute(selectedFlight?.callsign).data
+  const fallbackRoute = useRoute(selectedFlight && !selectedFlight.route ? selectedFlight.callsign : undefined).data
+  const route = resolveRoute(selectedFlight, fallbackRoute)
+  const filter = useStore((s) => s.airportFilter)
+  const follow = useStore((s) => s.followFlight)
+  const map = useMap()
 
-  const animate = (view?.zoom ?? 0) >= 6.5
+  const animate = (view?.zoom ?? 0) >= 6.5 || selected !== null
   useEffect(() => {
     if (!on || !animate) return
     const timer = setInterval(() => {
@@ -150,6 +189,7 @@ function FlightsLayer() {
     const features: Feature[] = []
     if (!env) return { type: 'FeatureCollection', features }
     for (const f of env.items) {
+      if (filter && f.hex !== selected && !servesAirport(f, filter.code)) continue
       const coords = project(f, (tick - env.fetchedAt) / 1000 + f.seen)
       features.push({
         type: 'Feature',
@@ -160,7 +200,7 @@ function FlightsLayer() {
           track: f.track ?? 0,
           kind: f.emergency ? 'emergency' : f.military ? 'military' : f.ground ? 'ground' : 'air',
           label: f.callsign ?? f.reg ?? f.hex,
-          title: [f.callsign ?? f.hex, f.type, f.altFt ? `${formatNumber(f.altFt)} ft` : f.ground ? 'on ground' : ''].filter(Boolean).join(', '),
+          title: [flightNumber(f.callsign) ?? f.callsign ?? f.hex, routeLabel(f), f.altFt ? `${formatNumber(f.altFt)} ft` : f.ground ? 'on the ground' : ''].filter(Boolean).join(', '),
         },
       })
       if (f.hex === selected) {
@@ -179,7 +219,7 @@ function FlightsLayer() {
         features.push({ type: 'Feature', geometry: { type: 'Point', coordinates: at }, properties: { role: 'airport', code: airport.iata_code ?? airport.icao_code } })
     }
     return { type: 'FeatureCollection', features }
-  }, [env, tick, selected, route])
+  }, [env, tick, selected, route, filter])
 
   const military = cssVar('--accent-strong')
   const specs = useMemo(
@@ -254,22 +294,36 @@ function FlightsLayer() {
     interactive: ['flights-icon'],
   })
 
+  useEffect(() => {
+    if (!map || !follow || !selectedFlight || !env) return
+    const [lon, lat] = project(selectedFlight, (tick - env.fetchedAt) / 1000 + selectedFlight.seen)
+    map.easeTo({ center: [lon, lat], duration: matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 900 })
+  }, [map, follow, selectedFlight, env, tick])
+
+  useEffect(() => {
+    if (env && selected) {
+      const f = env.items.find((i) => i.hex === selected)
+      if (f) lastSeen.set(selected, { flight: f, at: env.fetchedAt })
+    }
+  }, [env, selected])
+
   const inView = useMemo(() => {
     if (!env) return undefined
-    if (!view) return env.items.length
+    const list = filter ? env.items.filter((f) => servesAirport(f, filter.code)) : env.items
+    if (!view) return list.length
     const [w, s, e, n] = view.bounds
-    return env.items.filter((f) => f.lat >= s && f.lat <= n && f.lon >= w && f.lon <= e).length
-  }, [env, view])
+    return list.filter((f) => f.lat >= s && f.lat <= n && f.lon >= w && f.lon <= e).length
+  }, [env, view, filter])
 
   useLayerStatus('flights', on, query, {
     count: inView,
-    note: detailed ? 'in view' : 'in view, zoom in for more',
+    note: filter ? `to or from ${filter.label} in view` : detailed ? 'in view' : 'in view, zoom in for more',
     staleAfterMs: 3 * 60_000,
   })
   return null
 }
 
-function useFlight(hex: string): { flight?: Flight; fetchedAt?: number } {
+function useFlight(hex: string): { flight?: Flight; fetchedAt?: number; lost?: boolean } {
   const client = useQueryClient()
   const [, force] = useState(0)
   useEffect(
@@ -285,7 +339,19 @@ function useFlight(hex: string): { flight?: Flight; fetchedAt?: number } {
     const f = env?.items.find((i) => i.hex === hex)
     if (f && env && (!best || env.fetchedAt > best.fetchedAt)) best = { flight: f, fetchedAt: env.fetchedAt }
   }
-  return best ?? {}
+  if (best) return best
+  const last = lastSeen.get(hex)
+  return last ? { flight: last.flight, fetchedAt: last.at, lost: true } : {}
+}
+
+function phase(f: Flight, route?: Route): string | undefined {
+  const to = route ? (route.destination.municipality ?? route.destination.name) : undefined
+  const from = route ? (route.origin.municipality ?? route.origin.name) : undefined
+  if (f.ground) return to && route && distanceKm([f.lon, f.lat], [route.destination.longitude, route.destination.latitude]) < 15 ? `On the ground in ${to}` : 'On the ground'
+  const vr = f.vertFpm ?? 0
+  if (vr < -300 && (f.altFt ?? 99999) < 18000) return to ? `Descending into ${to}` : 'Descending'
+  if (vr > 300 && (f.altFt ?? 0) < 25000) return from ? `Climbing out of ${from}` : 'Climbing'
+  return to ? `Cruising to ${to}` : 'Cruising'
 }
 
 function RouteBlock({ route, flight }: { route: Route; flight: Flight }) {
@@ -294,7 +360,8 @@ function RouteBlock({ route, flight }: { route: Route; flight: Flight }) {
   const total = distanceKm(from, to)
   const left = distanceKm([flight.lon, flight.lat], to)
   const progress = Math.max(0, Math.min(1, 1 - left / total))
-  const etaMin = flight.speedKt && !flight.ground ? Math.round((left / (flight.speedKt * 1.852)) * 60) : undefined
+  const etaMin = flight.speedKt && flight.speedKt > 60 && !flight.ground ? Math.round((left / (flight.speedKt * 1.852)) * 60 + (left < 150 ? 4 : 10)) : undefined
+  const landsAt = etaMin !== undefined && etaMin < 18 * 60 ? formatClock(Date.now() + etaMin * 60_000) : undefined
   const place = (a: Airport) => a.municipality ?? a.name
 
   return (
@@ -319,20 +386,30 @@ function RouteBlock({ route, flight }: { route: Route; flight: Flight }) {
       >
         <span style={{ transform: `scaleX(${progress})` }} />
       </div>
+      {landsAt && etaMin !== undefined && (
+        <p className={styles.eta}>
+          Lands around <strong className="num">{landsAt} WIB</strong>
+          <span className={styles.left}>, in about {etaMin >= 60 ? `${Math.floor(etaMin / 60)} h ${etaMin % 60} min` : `${etaMin} min`}</span>
+        </p>
+      )}
       <p className={styles.left}>
-        {formatNumber(Math.round(left))} km to go of {formatNumber(Math.round(total))} km
-        {etaMin !== undefined && etaMin < 24 * 60 ? `, about ${etaMin >= 60 ? `${Math.floor(etaMin / 60)} h ${etaMin % 60} min` : `${etaMin} min`} at this speed` : ''}
+        {formatNumber(Math.round(left))} km to go of {formatNumber(Math.round(total))} km. Estimated from the current speed, not the airline schedule.
       </p>
     </div>
   )
 }
 
 function FlightDetail({ id }: { id: string }) {
-  const { flight: f } = useFlight(id)
-  const route = useRoute(f?.callsign)
+  const { flight: f, fetchedAt, lost } = useFlight(id)
+  const fallback = useRoute(f && !f.route ? f.callsign : undefined)
+  const route = { data: resolveRoute(f, fallback.data) }
   const photo = usePhoto(id)
+  const follow = useStore((s) => s.followFlight)
+  const setFollow = useStore((s) => s.setFollowFlight)
   if (!f) return <Gone layer="flights" />
-  const title = f.callsign ?? f.reg ?? f.hex.toUpperCase()
+  const number = flightNumber(f.callsign)
+  const status = phase(f, route.data)
+  const title = number ?? f.callsign ?? f.reg ?? f.hex.toUpperCase()
   const km = f.speedKt ? Math.round(f.speedKt * 1.852) : undefined
   const altM = f.altFt ? Math.round(f.altFt * 0.3048) : undefined
   const trail = trails.get(f.hex)
@@ -344,10 +421,25 @@ function FlightDetail({ id }: { id: string }) {
       <DetailHeader
         layer="flights"
         title={title}
-        subtitle={[route.data?.airline?.name, f.type, f.reg].filter(Boolean).join(', ') || 'Unknown aircraft'}
+        subtitle={[route.data?.airline?.name, number ? f.callsign : undefined, f.type, f.reg].filter(Boolean).join(', ') || 'Unknown aircraft'}
       />
+      {lost && fetchedAt && (
+        <p className={styles.lost} role="status">
+          Last seen {formatAgo(fetchedAt)}. It has probably landed or flown out of receiver range, so this is its last known state.
+        </p>
+      )}
       {f.emergency && <p className={styles.emergency}>Emergency squawk: {f.emergency}</p>}
-      {route.data && <RouteBlock route={route.data} flight={f} />}
+      {status && <p className={styles.phase}>{status}</p>}
+      {route.data ? (
+        <RouteBlock route={route.data} flight={f} />
+      ) : (
+        <p className={styles.left}>Route unknown. This callsign is not in the open route database yet.</p>
+      )}
+      {!lost && (
+        <button type="button" className={styles.follow} aria-pressed={follow} onClick={() => setFollow(!follow)}>
+          {follow ? 'Following on the map, tap to stop' : 'Follow on the map'}
+        </button>
+      )}
       <Lead
         value={f.ground ? 'Ground' : f.altFt !== null ? formatNumber(f.altFt) : 'Unknown'}
         unit={f.ground || f.altFt === null ? undefined : 'ft'}
@@ -359,8 +451,8 @@ function FlightDetail({ id }: { id: string }) {
           ['Heading', f.track !== undefined ? <span className="num">{Math.round(f.track)}°</span> : undefined],
           ['Climb rate', f.vertFpm ? <span className="num">{f.vertFpm > 0 ? '+' : ''}{formatNumber(f.vertFpm)} ft/min</span> : undefined],
           ['Airline', route.data?.airline ? `${route.data.airline.name}${route.data.airline.country ? `, ${route.data.airline.country}` : ''}` : undefined],
-          ['From', route.data ? route.data.origin.name : undefined],
-          ['To', route.data ? route.data.destination.name : undefined],
+          ['From', route.data ? `${route.data.origin.name}${route.data.origin.iata_code ? ` (${route.data.origin.iata_code})` : ''}` : undefined],
+          ['To', route.data ? `${route.data.destination.name}${route.data.destination.iata_code ? ` (${route.data.destination.iata_code})` : ''}` : undefined],
           ['Squawk', f.squawk],
           ['Operator type', f.military ? 'Military' : undefined],
           ['ICAO address', <span className="num">{f.hex.toUpperCase()}</span>],

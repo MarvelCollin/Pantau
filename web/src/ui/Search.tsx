@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { MagnifyingGlass } from '@phosphor-icons/react'
+import { MagnifyingGlass, MapPin } from '@phosphor-icons/react'
 import { getEnvelope, type Envelope } from '../lib/api'
 import { queryClient } from '../lib/query'
 import { prefetchLayer } from '../layers/prefetch'
@@ -9,13 +9,26 @@ import type { LayerId } from '../layers/registry'
 import type { Volcano } from '../layers/volcanoes'
 import type { Camera } from '../layers/cameras'
 import type { Quake } from '../layers/quakes'
-import type { Flight } from '../layers/flights'
+import { routeLabel, type Flight, type RouteAirport } from '../layers/flights'
 import { useStore } from '../state/store'
 import { cities } from '../map/overview'
+import type { AirportFilter } from '../state/store'
 import { LayerGlyph } from './LayerGlyph'
 import styles from './Search.module.css'
 
+type Scope = 'all' | 'flights' | 'places' | 'volcanoes' | 'cameras' | 'quakes'
+
+const SCOPES: { id: Scope; label: string; placeholder: string; examples: string[] }[] = [
+  { id: 'all', label: 'All', placeholder: 'Search a flight, city, volcano or camera', examples: ['Jakarta', 'Garuda', 'Merapi', 'Malioboro'] },
+  { id: 'flights', label: 'Flights', placeholder: 'Flight number, airline, city or airport', examples: ['GA', 'Citilink', 'Jakarta', 'DPS'] },
+  { id: 'places', label: 'Places', placeholder: 'City or province', examples: ['Bali', 'Medan', 'Makassar'] },
+  { id: 'volcanoes', label: 'Volcanoes', placeholder: 'Volcano name', examples: ['Merapi', 'Semeru', 'Krakatau'] },
+  { id: 'cameras', label: 'Cameras', placeholder: 'Street or area', examples: ['Malioboro', 'Tugu', 'Cikampek'] },
+  { id: 'quakes', label: 'Earthquakes', placeholder: 'Region of a recent earthquake', examples: ['Laut', 'Sulawesi', 'Maluku'] },
+]
+
 interface Result {
+  kind: Exclude<Scope, 'all'>
   key: string
   label: string
   hint: string
@@ -24,6 +37,7 @@ interface Result {
   zoom: number
   layer?: LayerId
   id?: string
+  filter?: AirportFilter
 }
 
 
@@ -47,7 +61,7 @@ function useCacheVersion() {
   return version
 }
 
-function useResults(text: string): Result[] {
+function useResults(text: string, scope: Scope): Result[] {
   const client = useQueryClient()
   const version = useCacheVersion()
   return useMemo(() => {
@@ -63,28 +77,37 @@ function useResults(text: string): Result[] {
     }
 
     for (const [name, region, lon, lat] of cities)
-      if (has(name) || has(region)) out.push({ key: `city-${name}`, label: name, hint: region, lon, lat, zoom: 10 })
+      if (has(name) || has(region)) out.push({ kind: 'places', key: `city-${name}`, label: name, hint: region, lon, lat, zoom: 10 })
     for (const v of envelopes<Volcano>(client, 'volcanoes'))
-      if (has(v.name)) out.push({ key: `v-${v.code}`, label: v.name, hint: `Volcano, level ${['I', 'II', 'III', 'IV'][v.level - 1]}, ${v.province}`, lon: v.lon, lat: v.lat, zoom: 10, layer: 'volcanoes', id: v.code })
+      if (has(v.name)) out.push({ kind: 'volcanoes', key: `v-${v.code}`, label: v.name, hint: `Volcano, level ${['I', 'II', 'III', 'IV'][v.level - 1]}, ${v.province}`, lon: v.lon, lat: v.lat, zoom: 10, layer: 'volcanoes', id: v.code })
     for (const c of envelopes<Camera>(client, 'cameras'))
-      if (has(c.name) || has(c.area)) out.push({ key: c.id, label: c.name, hint: `Camera, ${c.area ?? c.source}${c.online ? '' : ', offline'}`, lon: c.lon, lat: c.lat, zoom: 15, layer: 'cameras', id: c.id })
+      if (has(c.name) || has(c.area)) out.push({ kind: 'cameras', key: c.id, label: c.name, hint: `Camera, ${c.area ?? c.source}${c.online ? '' : ', offline'}`, lon: c.lon, lat: c.lat, zoom: 15, layer: 'cameras', id: c.id })
     const seen = new Set<string>()
+    const airports = new Map<string, { airport: RouteAirport; count: number }>()
+    const airportHit = (a: RouteAirport) =>
+      has(a.city) || has(a.name) || a.code.toLowerCase() === q || (a.iata !== undefined && a.iata.toLowerCase() === q)
+    const flightRows: Result[] = []
     for (const f of envelopes<Flight>(client, 'flights')) {
       if (seen.has(f.hex)) continue
       const number = flightNumber(f.callsign)
       const airline = f.callsign ? airlineName(f.callsign) : undefined
+      const routeHit = f.route ? [f.route.from, f.route.to].filter(airportHit) : []
+      for (const a of routeHit) airports.set(a.code, { airport: a, count: (airports.get(a.code)?.count ?? 0) + 1 })
       const match =
         has(f.callsign) ||
         has(f.reg) ||
         has(airline) ||
+        routeHit.length > 0 ||
         (number !== undefined && number.replace(' ', '').toLowerCase().startsWith(compact)) ||
         f.hex === q
       if (!match) continue
       seen.add(f.hex)
-      out.push({
+      const route = routeLabel(f)
+      flightRows.push({
+        kind: 'flights',
         key: `f-${f.hex}`,
-        label: number ? `${number}, ${f.callsign}` : (f.callsign ?? f.reg ?? f.hex),
-        hint: [airline ?? 'Flight', f.type, f.ground ? 'on the ground' : undefined].filter(Boolean).join(', '),
+        label: [number ?? f.callsign ?? f.reg ?? f.hex, route].filter(Boolean).join(', '),
+        hint: [airline ?? 'Flight', number ? f.callsign : undefined, f.ground ? 'on the ground' : undefined].filter(Boolean).join(', '),
         lon: f.lon,
         lat: f.lat,
         zoom: 8,
@@ -92,13 +115,27 @@ function useResults(text: string): Result[] {
         id: f.hex,
       })
     }
+    for (const { airport, count } of [...airports.values()].sort((a, b) => b.count - a.count).slice(0, 2)) {
+      const code = airport.iata ?? airport.code
+      out.push({
+        kind: 'flights',
+        key: `airport-${airport.code}`,
+        label: `Show all ${count} flight${count === 1 ? '' : 's'} to or from ${airport.city} (${code})`,
+        hint: airport.name,
+        lon: airport.lon,
+        lat: airport.lat,
+        zoom: 6,
+        filter: { code: airport.code, label: `${airport.city} (${code})` },
+      })
+    }
+    out.push(...flightRows)
     for (const e of envelopes<Quake>(client, 'quakes'))
-      if (e.source === 'BMKG' && has(e.place)) out.push({ key: e.id, label: `M${e.mag.toFixed(1)} ${e.place}`, hint: 'Earthquake', lon: e.lon, lat: e.lat, zoom: 7, layer: 'quakes', id: e.id })
+      if (e.source === 'BMKG' && has(e.place)) out.push({ kind: 'quakes', key: e.id, label: `M${e.mag.toFixed(1)} ${e.place}`, hint: 'Earthquake', lon: e.lon, lat: e.lat, zoom: 7, layer: 'quakes', id: e.id })
     const code = compact.slice(0, 2).toUpperCase()
     const flightLike = Object.values(AIRLINES).some((a) => a.iata === code) && /^[a-z0-9]{2}\d*$/.test(compact)
-    if (flightLike) out.sort((a, b) => Number(b.layer === 'flights') - Number(a.layer === 'flights'))
-    return out.slice(0, 10)
-  }, [text, client, version])
+    if (flightLike) out.sort((a, b) => Number(b.kind === 'flights') - Number(a.kind === 'flights'))
+    return out.filter((r) => scope === 'all' || r.kind === scope).slice(0, scope === 'all' ? 10 : 30)
+  }, [text, scope, client, version])
 }
 
 function warmSearch() {
@@ -115,13 +152,19 @@ export function Search() {
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(0)
   const input = useRef<HTMLInputElement>(null)
-  const results = useResults(text)
+  const [scope, setScope] = useState<Scope>('all')
+  const results = useResults(text, scope)
+  const current = SCOPES.find((x) => x.id === scope)!
   const listId = useId()
   const [narrow] = useState(() => matchMedia('(max-width: 900px)').matches)
   const { select, requestFly, toggleLayer } = useStore.getState()
 
   const choose = (r: Result) => {
-    if (r.layer && r.id) {
+    if (r.filter) {
+      if (!useStore.getState().enabled.includes('flights')) toggleLayer('flights')
+      useStore.getState().setAirportFilter(r.filter)
+      select(null)
+    } else if (r.layer && r.id) {
       if (!useStore.getState().enabled.includes(r.layer)) toggleLayer(r.layer)
       select({ kind: 'item', layer: r.layer, id: r.id })
     }
@@ -148,7 +191,14 @@ export function Search() {
     }
   }
 
-  const showList = open && text.trim().length >= 2
+  const typed = text.trim().length >= 2
+  const showList = open && typed
+  const pick = (value: string) => {
+    warmSearch()
+    setText(value)
+    setActive(0)
+    input.current?.focus()
+  }
 
   return (
     <div className={styles.search}>
@@ -164,7 +214,7 @@ export function Search() {
           aria-controls={listId}
           aria-autocomplete="list"
           aria-activedescendant={showList && results[active] ? `${listId}-${active}` : undefined}
-          placeholder={narrow ? 'Search' : 'Search a flight, city, volcano or camera'}
+          placeholder={narrow ? 'Search' : current.placeholder}
           value={text}
           onChange={(e) => {
             warmSearch()
@@ -182,11 +232,43 @@ export function Search() {
           spellCheck={false}
         />
       </label>
+      {open && (
+        <div className={styles.panel} onMouseDown={(e) => e.preventDefault()}>
+          <div className={styles.scopes} role="radiogroup" aria-label="What are you looking for">
+            {SCOPES.map((x) => (
+              <button
+                key={x.id}
+                type="button"
+                role="radio"
+                aria-checked={scope === x.id}
+                className={styles.scope}
+                onClick={() => {
+                  setScope(x.id)
+                  setActive(0)
+                  input.current?.focus()
+                }}
+              >
+                {x.label}
+              </button>
+            ))}
+          </div>
+          {!typed && (
+            <div className={styles.examples}>
+              <p className={styles.examplesLabel}>{scope === 'all' ? 'What are you looking for? Pick a type above or try' : `${current.placeholder}, for example`}</p>
+              <div className={styles.exampleRow}>
+                {current.examples.map((ex) => (
+                  <button key={ex} type="button" className={styles.example} onClick={() => pick(ex)}>
+                    {ex}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
       {showList && (
         <ul id={listId} role="listbox" className={`scroll ${styles.list}`} aria-label="Search results">
           {results.length === 0 ? (
             <li className={styles.empty} role="option" aria-selected="false" aria-disabled="true">
-              Nothing found. Try a flight number like GA 410, a city, a volcano or a camera name.
+              {scope === 'all' ? 'Nothing found. Try a flight number like GA 410, a city, a volcano or a camera name.' : `No ${current.label.toLowerCase()} match. Try ${current.examples[0]} or switch to All.`}
             </li>
           ) : (
             results.map((r, i) => (
@@ -200,7 +282,9 @@ export function Search() {
                 onClick={() => choose(r)}
                 onMouseEnter={() => setActive(i)}
               >
-                <span className={styles.glyph}>{r.layer ? <LayerGlyph id={r.layer} size={16} /> : <MagnifyingGlass size={16} aria-hidden="true" />}</span>
+                <span className={styles.glyph}>
+                  {r.layer ? <LayerGlyph id={r.layer} size={16} /> : r.filter ? <LayerGlyph id="flights" size={16} /> : <MapPin size={16} aria-hidden="true" />}
+                </span>
                 <span className={styles.text}>
                   <span className={styles.label}>{r.label}</span>
                   <span className={styles.hint}>{r.hint}</span>
@@ -209,6 +293,8 @@ export function Search() {
             ))
           )}
         </ul>
+      )}
+        </div>
       )}
     </div>
   )

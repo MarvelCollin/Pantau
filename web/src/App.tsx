@@ -9,6 +9,7 @@ import { DataLayers } from './layers/DataLayers'
 import { PointWeather } from './layers/weather'
 import { Search } from './ui/Search'
 import { Telemetry } from './ui/Telemetry'
+import { FilterBar } from './ui/FilterBar'
 import styles from './App.module.css'
 
 const MapView = lazy(() => import('./map/MapView').then((m) => ({ default: m.MapView })))
@@ -29,6 +30,7 @@ export default function App() {
         <Suspense fallback={<MapFallback />}>
           <MapView>
             <DataLayers />
+            <FilterBar />
           </MapView>
         </Suspense>
       </main>

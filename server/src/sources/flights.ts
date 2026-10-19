@@ -1,5 +1,6 @@
 import { cached } from '../lib/cache.js'
 import { fetchJson, round } from '../lib/http.js'
+import { attachRoutes, type FlightRoute } from './routes.js'
 
 export const CELL_DEG = 5
 const RADIUS_NM = 250
@@ -20,6 +21,7 @@ export interface Flight {
   emergency?: string
   military: boolean
   seen: number
+  route?: FlightRoute
 }
 
 interface ReadsbAircraft {
@@ -114,7 +116,7 @@ export async function loadOverview(): Promise<Flight[]> {
   if (ok.length === 0) throw (results[0] as PromiseRejectedResult).reason
   const merged = new Map<string, Flight>()
   for (const r of ok) for (const f of r.value) if (!merged.has(f.hex) || merged.get(f.hex)!.seen > f.seen) merged.set(f.hex, f)
-  return [...merged.values()]
+  return attachRoutes([...merged.values()])
 }
 
 export interface AircraftPhoto {
@@ -166,5 +168,5 @@ export async function loadFlights(lat: number, lon: number): Promise<Flight[]> {
       seen: Math.round(a.seen_pos ?? 0),
     })
   }
-  return out
+  return attachRoutes(out)
 }
