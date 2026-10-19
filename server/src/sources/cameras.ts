@@ -3,7 +3,7 @@ import { fetchJson, fetchText, round, UpstreamError } from '../lib/http.js'
 
 export interface Camera {
   id: string
-  source: 'Bina Marga' | 'LTA Singapore'
+  source: 'Bina Marga' | 'LTA Singapore' | 'Jogja City'
   name: string
   area?: string
   lat: number
@@ -12,6 +12,8 @@ export interface Camera {
   online: boolean
   image?: string
   page?: string
+  stream?: string
+  note?: string
 }
 
 export interface Stream {
@@ -78,11 +80,71 @@ async function singapore(): Promise<Camera[]> {
   }))
 }
 
+interface JogjaCamera {
+  cctv_id: string
+  cctv_title: string
+  cctv_link: string
+  cctv_latitude: string
+  cctv_longitude: string
+  cctv_status: string
+}
+
+async function jogja(): Promise<Camera[]> {
+  const { entry } = await cached('cameras:jogja', { ttl: 6 * 3600, swr: 18 * 3600, sie: 7 * 86400 }, async () => {
+    const list = await fetchJson<JogjaCamera[]>('Jogja City', 'https://cctv.jogjakota.go.id/home/getdata', {
+      timeoutMs: 12000,
+      headers: { 'x-requested-with': 'XMLHttpRequest', referer: 'https://cctv.jogjakota.go.id/' },
+    })
+    return list
+      .map((c) => ({
+        id: `jg-${c.cctv_id}`,
+        source: 'Jogja City' as const,
+        name: c.cctv_title.replace(/_+/g, ' ').replace(/\s+/g, ' ').trim(),
+        area: 'Yogyakarta',
+        lat: round(Number(c.cctv_latitude)),
+        lon: round(Number(c.cctv_longitude)),
+        kind: 'hls' as const,
+        online: c.cctv_status === '0' && c.cctv_link.startsWith('https://'),
+        stream: c.cctv_link,
+        page: 'https://cctv.jogjakota.go.id/',
+      }))
+      .filter((c) => Number.isFinite(c.lat) && Number.isFinite(c.lon) && c.lat !== 0)
+  })
+  return entry.value
+}
+
+async function hostProblem(host: string, probe: string): Promise<string | null> {
+  const { entry } = await cached(`camera-host:${host}`, { ttl: 1800, swr: 1800, sie: 3600 }, async () => {
+    try {
+      const res = await fetch(probe, { signal: AbortSignal.timeout(6000) })
+      if (!res.ok) return `The camera server answers with an error (${res.status})`
+      const text = await res.text()
+      return text.includes('#EXTM3U') ? '' : 'The camera server sends no video'
+    } catch (error) {
+      const code = (error as { cause?: { code?: string } }).cause?.code ?? ''
+      if (code.includes('CERT')) return 'The camera server certificate has expired, so browsers block it'
+      return 'The camera server is not reachable right now'
+    }
+  })
+  return entry.value || null
+}
+
 export async function loadCameras(): Promise<Camera[]> {
-  const [bm, sg] = await Promise.allSettled([binamarga(), singapore()])
-  if (bm.status === 'rejected' && sg.status === 'rejected') throw bm.reason
+  const [bm, sg, jg] = await Promise.allSettled([binamarga(), singapore(), jogja()])
+  if (bm.status === 'rejected' && sg.status === 'rejected' && jg.status === 'rejected') throw bm.reason
   const list: Camera[] = []
-  if (bm.status === 'fulfilled') list.push(...bm.value.map(({ stream: _s, feed: _f, ...camera }) => camera))
+  if (bm.status === 'fulfilled') {
+    const probes = new Map<string, string>()
+    for (const c of bm.value) if (c.feed !== 'apace' && c.stream.endsWith('.m3u8')) probes.set(new URL(c.stream).host, c.stream)
+    const problems = new Map<string, string | null>()
+    await Promise.all([...probes].map(async ([host, url]) => problems.set(host, await hostProblem(host, url))))
+    for (const { stream, feed, ...camera } of bm.value) {
+      const direct = feed !== 'apace' && stream.endsWith('.m3u8')
+      const problem = direct ? problems.get(new URL(stream).host) : null
+      list.push({ ...camera, stream: direct ? stream : undefined, online: camera.online && !problem, note: problem ?? undefined })
+    }
+  }
+  if (jg.status === 'fulfilled') list.push(...jg.value)
   if (sg.status === 'fulfilled') list.push(...sg.value)
   return list
 }

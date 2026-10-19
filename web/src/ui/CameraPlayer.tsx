@@ -20,11 +20,14 @@ function HlsVideo({ url, title, onState }: { url: string; title: string; onState
     let cleanup = () => {}
     const playing = () => onState('playing')
     const failed = () => onState('failed')
+    el.muted = true
     el.addEventListener('playing', playing)
+    el.addEventListener('loadeddata', playing)
+    el.addEventListener('canplay', playing)
     el.addEventListener('error', failed)
     const timeout = setTimeout(() => {
       if (el.readyState < 2) failed()
-    }, 15_000)
+    }, 25_000)
 
     if (el.canPlayType('application/vnd.apple.mpegurl')) {
       el.src = url
@@ -48,6 +51,8 @@ function HlsVideo({ url, title, onState }: { url: string; title: string; onState
       destroyed = true
       clearTimeout(timeout)
       el.removeEventListener('playing', playing)
+      el.removeEventListener('loadeddata', playing)
+      el.removeEventListener('canplay', playing)
       el.removeEventListener('error', failed)
       cleanup()
       el.removeAttribute('src')
@@ -58,9 +63,9 @@ function HlsVideo({ url, title, onState }: { url: string; title: string; onState
   return <video ref={video} className={styles.media} muted playsInline autoPlay controls aria-label={title} />
 }
 
-export function CameraPlayer({ id, title, image, page }: { id: string; title: string; image?: string; page?: string }) {
+export function CameraPlayer({ id, title, image, page, stream: direct, note }: { id: string; title: string; image?: string; page?: string; stream?: string; note?: string }) {
   const [state, setState] = useState<PlayState>('loading')
-  const needsResolve = !image
+  const needsResolve = !image && !direct && !note
   const { data, isError } = useQuery({
     queryKey: ['stream', id],
     queryFn: ({ signal }) => getEnvelope<Stream>(`/api/cameras/stream?id=${encodeURIComponent(id)}`, signal),
@@ -71,8 +76,8 @@ export function CameraPlayer({ id, title, image, page }: { id: string; title: st
 
   useEffect(() => setState('loading'), [id])
 
-  const stream: Stream | undefined = image ? { kind: 'image', url: image } : data?.items
-  const failed = isError || state === 'failed' || stream?.kind === 'page'
+  const stream: Stream | undefined = image ? { kind: 'image', url: image } : direct ? { kind: 'hls', url: direct } : data?.items
+  const failed = !!note || isError || state === 'failed' || stream?.kind === 'page'
 
   return (
     <figure className={styles.frame}>
@@ -95,7 +100,7 @@ export function CameraPlayer({ id, title, image, page }: { id: string; title: st
         {!failed && state === 'loading' && <span className={`skeleton ${styles.loading}`} aria-label="Loading camera" />}
         {failed && (
           <div className={styles.failed} role="status">
-            <p>This camera is not answering right now. Public feeds often go offline for maintenance.</p>
+            <p>{note ? `${note}. Pantau will show it again once the operator fixes it.` : 'This camera is not answering right now. Public feeds often go offline for maintenance.'}</p>
             {page && (
               <a href={page} target="_blank" rel="noreferrer noopener">
                 Try the operator page

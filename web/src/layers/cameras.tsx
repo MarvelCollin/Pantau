@@ -13,7 +13,7 @@ import { distanceKm } from './trails'
 
 export interface Camera {
   id: string
-  source: 'Bina Marga' | 'LTA Singapore'
+  source: 'Bina Marga' | 'LTA Singapore' | 'Jogja City'
   name: string
   area?: string
   lat: number
@@ -22,6 +22,8 @@ export interface Camera {
   online: boolean
   image?: string
   page?: string
+  stream?: string
+  note?: string
 }
 
 export function useCameras(enabled = true) {
@@ -88,11 +90,11 @@ function CameraDetail({ id }: { id: string }) {
   return (
     <>
       <DetailHeader layer="cameras" title={c.name} subtitle={[c.area, c.source].filter(Boolean).join(', ')} />
-      <CameraPlayer id={c.id} title={c.name} image={c.image} page={c.page} />
+      <CameraPlayer id={c.id} title={c.name} image={c.image} page={c.page} stream={c.stream} note={c.note} />
       <Facts
         rows={[
-          ['Status', c.online ? 'Listed as online' : 'Listed as offline by the operator'],
-          ['Operator', c.source === 'Bina Marga' ? 'Ministry of Public Works, Bina Marga' : 'Land Transport Authority, Singapore'],
+          ['Status', c.online ? 'Online' : (c.note ?? 'Listed as offline by the operator')],
+          ['Operator', c.source === 'Bina Marga' ? 'Ministry of Public Works, Bina Marga' : c.source === 'Jogja City' ? 'Yogyakarta City Government' : 'Land Transport Authority, Singapore'],
           ['Location', <span className="num">{formatCoord(c.lat, c.lon)}</span>],
         ]}
       />

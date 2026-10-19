@@ -18,7 +18,7 @@ A live map of Indonesia built only from free public data. Flights, ships, satell
 | Fire hotspots | NASA FIRMS | Fire power, confidence, hotspots within 10 km, nearest city |
 | Citizen reports | PetaBencana | Report text, photo, flood depth |
 | Rain radar and weather | RainViewer, Open-Meteo | Radar loop, current weather, air quality and the next 12 hours for any point you tap |
-| Road cameras | Bina Marga, LTA Singapore | Live HLS or YouTube stream or snapshot, nearby cameras |
+| Cameras | Jogja City, Bina Marga, LTA Singapore | 152 live city cameras in Yogyakarta, national road streams and Singapore snapshots, nearby cameras |
 
 Every view has its own link, so the layers you turned on, the map position and the selected item can be shared.
 

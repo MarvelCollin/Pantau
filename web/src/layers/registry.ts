@@ -29,7 +29,7 @@ export const layers: LayerInfo[] = [
   { id: 'fires', label: 'Fire hotspots', group: 'Hazards', hint: 'VIIRS satellite detections, past 24 hours', source: 'NASA FIRMS', sourceUrl: 'https://firms.modaps.eosdis.nasa.gov' },
   { id: 'reports', label: 'Citizen reports', group: 'Hazards', hint: 'Flood, haze and fire reports, past 3 days', source: 'PetaBencana', sourceUrl: 'https://petabencana.id' },
   { id: 'weather', label: 'Rain radar', group: 'Sky', hint: 'Radar loop, tap the map for local weather', source: 'RainViewer, Open-Meteo', sourceUrl: 'https://www.rainviewer.com' },
-  { id: 'cameras', label: 'Road cameras', group: 'Eyes', hint: 'Public national road and Singapore traffic cameras', source: 'Bina Marga, LTA', sourceUrl: 'https://binamarga.pu.go.id' },
+  { id: 'cameras', label: 'Cameras', group: 'Eyes', hint: 'Live public cameras in Yogyakarta, national roads and Singapore', source: 'Jogja City, Bina Marga, LTA', sourceUrl: 'https://binamarga.pu.go.id' },
 ]
 
 export const layerIds = layers.map((l) => l.id)
