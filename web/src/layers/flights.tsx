@@ -11,6 +11,7 @@ import { useLayerStatus } from './useLayerStatus'
 import { TrailBook, distanceKm, greatCircle, lineCoords } from './trails'
 import { DetailHeader, ExternalLink, Facts, Gone, Lead, Section } from '../ui/Detail'
 import styles from './flights.module.css'
+import { airlineName } from './airlines'
 
 export interface Flight {
   hex: string
@@ -54,27 +55,6 @@ interface Photo {
   photographer: string
 }
 
-const AIRLINES: Record<string, string> = {
-  GIA: 'Garuda Indonesia',
-  CTV: 'Citilink',
-  LNI: 'Lion Air',
-  BTK: 'Batik Air',
-  WON: 'Wings Air',
-  SJV: 'Super Air Jet',
-  AWQ: 'Indonesia AirAsia',
-  SJY: 'Sriwijaya Air',
-  NAM: 'NAM Air',
-  PAS: 'Pelita Air',
-  TGN: 'Trigana Air',
-  TNU: 'TransNusa',
-  XAX: 'AirAsia X',
-  SIA: 'Singapore Airlines',
-  TGW: 'Scoot',
-  MAS: 'Malaysia Airlines',
-  AXM: 'AirAsia',
-  QFA: 'Qantas',
-  JST: 'Jetstar',
-}
 
 const CELL = 5
 const DETAIL_ZOOM = 6
@@ -122,7 +102,7 @@ function useRoute(callsign?: string) {
       try {
         const res = await getJson<{ response: { flightroute?: Route } | string }>(`https://api.adsbdb.com/v0/callsign/${encodeURIComponent(callsign!)}`, signal)
         const route = typeof res.response === 'object' ? (res.response.flightroute ?? null) : null
-        const known = AIRLINES[callsign!.slice(0, 3)]
+        const known = airlineName(callsign!)
         if (route && known && route.airline?.name !== known) route.airline = { ...route.airline, name: known, country: undefined }
         return route
       } catch {

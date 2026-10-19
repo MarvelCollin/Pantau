@@ -1,7 +1,10 @@
-import { useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { MagnifyingGlass } from '@phosphor-icons/react'
-import type { Envelope } from '../lib/api'
+import { getEnvelope, type Envelope } from '../lib/api'
+import { queryClient } from '../lib/query'
+import { prefetchLayer } from '../layers/prefetch'
+import { AIRLINES, airlineName, flightNumber } from '../layers/airlines'
 import type { LayerId } from '../layers/registry'
 import type { Volcano } from '../layers/volcanoes'
 import type { Camera } from '../layers/cameras'
@@ -31,11 +34,26 @@ function envelopes<T>(client: ReturnType<typeof useQueryClient>, key: string): T
     .flatMap((q) => (q.state.data as Envelope<T[]> | undefined)?.items ?? [])
 }
 
+function useCacheVersion() {
+  const client = useQueryClient()
+  const [version, setVersion] = useState(0)
+  useEffect(
+    () =>
+      client.getQueryCache().subscribe((event) => {
+        if (event.type === 'updated' && event.action.type === 'success') setVersion((v) => v + 1)
+      }),
+    [client],
+  )
+  return version
+}
+
 function useResults(text: string): Result[] {
   const client = useQueryClient()
+  const version = useCacheVersion()
   return useMemo(() => {
     const q = text.trim().toLowerCase()
     if (q.length < 2) return []
+    const compact = q.replace(/\s+/g, '')
     const out: Result[] = []
     const has = (s?: string) => {
       if (!s) return false
@@ -44,21 +62,52 @@ function useResults(text: string): Result[] {
       return lower.split(/[^a-z0-9]+/).some((word) => word.startsWith(q))
     }
 
-    for (const [name, region, lon, lat] of cities) if (has(name)) out.push({ key: `city-${name}`, label: name, hint: region, lon, lat, zoom: 10 })
+    for (const [name, region, lon, lat] of cities)
+      if (has(name) || has(region)) out.push({ key: `city-${name}`, label: name, hint: region, lon, lat, zoom: 10 })
     for (const v of envelopes<Volcano>(client, 'volcanoes'))
-      if (has(v.name)) out.push({ key: `v-${v.code}`, label: v.name, hint: `Volcano, ${v.province}`, lon: v.lon, lat: v.lat, zoom: 10, layer: 'volcanoes', id: v.code })
+      if (has(v.name)) out.push({ key: `v-${v.code}`, label: v.name, hint: `Volcano, level ${['I', 'II', 'III', 'IV'][v.level - 1]}, ${v.province}`, lon: v.lon, lat: v.lat, zoom: 10, layer: 'volcanoes', id: v.code })
     for (const c of envelopes<Camera>(client, 'cameras'))
-      if (has(c.name) || has(c.area)) out.push({ key: c.id, label: c.name, hint: `Camera, ${c.area ?? c.source}`, lon: c.lon, lat: c.lat, zoom: 13, layer: 'cameras', id: c.id })
+      if (has(c.name) || has(c.area)) out.push({ key: c.id, label: c.name, hint: `Camera, ${c.area ?? c.source}${c.online ? '' : ', offline'}`, lon: c.lon, lat: c.lat, zoom: 15, layer: 'cameras', id: c.id })
     const seen = new Set<string>()
     for (const f of envelopes<Flight>(client, 'flights')) {
-      if (seen.has(f.hex) || !(has(f.callsign) || has(f.reg) || f.hex === q)) continue
+      if (seen.has(f.hex)) continue
+      const number = flightNumber(f.callsign)
+      const airline = f.callsign ? airlineName(f.callsign) : undefined
+      const match =
+        has(f.callsign) ||
+        has(f.reg) ||
+        has(airline) ||
+        (number !== undefined && number.replace(' ', '').toLowerCase().startsWith(compact)) ||
+        f.hex === q
+      if (!match) continue
       seen.add(f.hex)
-      out.push({ key: `f-${f.hex}`, label: f.callsign ?? f.reg ?? f.hex, hint: `Flight, ${f.type ?? 'aircraft'}`, lon: f.lon, lat: f.lat, zoom: 9, layer: 'flights', id: f.hex })
+      out.push({
+        key: `f-${f.hex}`,
+        label: number ? `${number}, ${f.callsign}` : (f.callsign ?? f.reg ?? f.hex),
+        hint: [airline ?? 'Flight', f.type, f.ground ? 'on the ground' : undefined].filter(Boolean).join(', '),
+        lon: f.lon,
+        lat: f.lat,
+        zoom: 8,
+        layer: 'flights',
+        id: f.hex,
+      })
     }
     for (const e of envelopes<Quake>(client, 'quakes'))
       if (e.source === 'BMKG' && has(e.place)) out.push({ key: e.id, label: `M${e.mag.toFixed(1)} ${e.place}`, hint: 'Earthquake', lon: e.lon, lat: e.lat, zoom: 7, layer: 'quakes', id: e.id })
-    return out.slice(0, 8)
-  }, [text, client])
+    const code = compact.slice(0, 2).toUpperCase()
+    const flightLike = Object.values(AIRLINES).some((a) => a.iata === code) && /^[a-z0-9]{2}\d*$/.test(compact)
+    if (flightLike) out.sort((a, b) => Number(b.layer === 'flights') - Number(a.layer === 'flights'))
+    return out.slice(0, 10)
+  }, [text, client, version])
+}
+
+function warmSearch() {
+  for (const id of ['volcanoes', 'cameras', 'quakes'] as const) prefetchLayer(id)
+  queryClient.prefetchQuery({
+    queryKey: ['flights', 'overview'],
+    queryFn: ({ signal }) => getEnvelope('/api/flights/overview', signal),
+    staleTime: 40_000,
+  })
 }
 
 export function Search() {
@@ -115,14 +164,18 @@ export function Search() {
           aria-controls={listId}
           aria-autocomplete="list"
           aria-activedescendant={showList && results[active] ? `${listId}-${active}` : undefined}
-          placeholder={narrow ? 'Search' : 'Search places, volcanoes, flights'}
+          placeholder={narrow ? 'Search' : 'Search a flight, city, volcano or camera'}
           value={text}
           onChange={(e) => {
+            warmSearch()
             setText(e.target.value)
             setActive(0)
             setOpen(true)
           }}
-          onFocus={() => setOpen(true)}
+          onFocus={() => {
+            setOpen(true)
+            warmSearch()
+          }}
           onBlur={() => setTimeout(() => setOpen(false), 120)}
           onKeyDown={onKey}
           autoComplete="off"
@@ -133,7 +186,7 @@ export function Search() {
         <ul id={listId} role="listbox" className={`scroll ${styles.list}`} aria-label="Search results">
           {results.length === 0 ? (
             <li className={styles.empty} role="option" aria-selected="false" aria-disabled="true">
-              Nothing found. Turn on a layer to search its items.
+              Nothing found. Try a flight number like GA 410, a city, a volcano or a camera name.
             </li>
           ) : (
             results.map((r, i) => (
