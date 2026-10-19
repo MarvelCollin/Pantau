@@ -349,8 +349,8 @@ function phase(f: Flight, route?: Route): string | undefined {
   const from = route ? (route.origin.municipality ?? route.origin.name) : undefined
   if (f.ground) return to && route && distanceKm([f.lon, f.lat], [route.destination.longitude, route.destination.latitude]) < 15 ? `On the ground in ${to}` : 'On the ground'
   const vr = f.vertFpm ?? 0
-  if (vr < -300 && (f.altFt ?? 99999) < 18000) return to ? `Descending into ${to}` : 'Descending'
-  if (vr > 300 && (f.altFt ?? 0) < 25000) return from ? `Climbing out of ${from}` : 'Climbing'
+  if (vr < -500) return to ? `Descending into ${to}` : 'Descending'
+  if (vr > 500) return from ? `Climbing out of ${from}` : 'Climbing'
   return to ? `Cruising to ${to}` : 'Cruising'
 }
 
