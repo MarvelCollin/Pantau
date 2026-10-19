@@ -8,15 +8,12 @@
 .map {
   position: absolute;
   inset: 0;
-  background: var(--surface);
+  background: var(--map-water);
 }
 
-.loading {
+.placeholder {
   position: absolute;
   inset: 0;
-  display: grid;
-  place-items: center;
-  color: var(--muted);
-  font-size: var(--text-sm);
   pointer-events: none;
+  background: var(--map-water);
 }

@@ -3,7 +3,7 @@ import { Map as MapLibre, setWorkerUrl, type GeoJSONSource, type MapMouseEvent }
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { MapContext, interactiveLayers } from './context'
-import { applyBasemap, BASEMAP_STYLE } from './basemap'
+import { applyBasemap, buildStyle } from './basemap'
 import { registerIcons } from './icons'
 import { useStore } from '../state/store'
 import { basemapPalettes, cssVar } from '../theme'
@@ -56,6 +56,10 @@ function addSelectionLayer(map: MapLibre) {
   })
 }
 
+export function MapPlaceholder() {
+  return <div className={styles.placeholder} aria-hidden="true" />
+}
+
 export function MapView({ children }: { children: ReactNode }) {
   const container = useRef<HTMLDivElement>(null)
   const camera = useRef(initialCamera())
@@ -68,7 +72,7 @@ export function MapView({ children }: { children: ReactNode }) {
     if (!container.current) return
     const instance = new MapLibre({
       container: container.current,
-      style: BASEMAP_STYLE,
+      style: buildStyle(basemapPalettes[useStore.getState().theme]),
       ...camera.current,
       minZoom: 2,
       maxZoom: 17,
@@ -91,7 +95,6 @@ export function MapView({ children }: { children: ReactNode }) {
     }
 
     instance.once('load', () => {
-      applyBasemap(instance, basemapPalettes[useStore.getState().theme])
       registerIcons(instance)
       addSelectionLayer(instance)
       publishView()
@@ -130,9 +133,11 @@ export function MapView({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  const appliedTheme = useRef(theme)
   useEffect(() => {
     if (!map) return
-    applyBasemap(map, basemapPalettes[theme])
+    if (appliedTheme.current !== theme) applyBasemap(map, basemapPalettes[theme])
+    appliedTheme.current = theme
     map.setPaintProperty('selection-ring', 'circle-stroke-color', cssVar('--ink'))
   }, [map, theme])
 
@@ -158,7 +163,7 @@ export function MapView({ children }: { children: ReactNode }) {
   return (
     <div className={styles.wrap}>
       <div ref={container} className={styles.map} role="region" aria-label="Map of Indonesia" />
-      {!map && <div className={styles.loading} aria-live="polite">Loading map</div>}
+      {!map && <MapPlaceholder />}
       <MapContext.Provider value={map}>
         {children}
         {map && <MapControls map={map} />}

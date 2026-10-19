@@ -4,6 +4,7 @@ import { formatAgo, formatNumber } from '../lib/format'
 import { useNow } from '../lib/useNow'
 import { LayerGlyph } from './LayerGlyph'
 import { SwitchTrack } from './Switch'
+import { prefetchLayer } from '../layers/prefetch'
 import styles from './LayerPanel.module.css'
 
 const groups: LayerGroup[] = ['Moving', 'Hazards', 'Sky', 'Eyes']
@@ -62,9 +63,9 @@ export function LayerPanel() {
     <nav className={styles.panel} aria-label="Map layers">
       {groups.map((group) => (
         <section key={group} className={styles.group} aria-labelledby={`group-${group}`}>
-          <h3 id={`group-${group}`} className={styles.groupLabel}>
+          <h2 id={`group-${group}`} className={styles.groupLabel}>
             {group}
-          </h3>
+          </h2>
           <ul className={styles.list}>
             {layers
               .filter((l) => l.group === group)
@@ -79,6 +80,8 @@ export function LayerPanel() {
                       className={styles.row}
                       data-on={on}
                       onClick={() => toggle(info.id)}
+                      onPointerEnter={() => !on && prefetchLayer(info.id)}
+                      onFocus={() => !on && prefetchLayer(info.id)}
                     >
                       <span className={styles.glyph}>
                         <LayerGlyph id={info.id} />

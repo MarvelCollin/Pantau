@@ -18,3 +18,9 @@
     bottom: 52px;
   }
 }
+
+.mapFallback {
+  position: absolute;
+  inset: 0;
+  background: var(--map-water);
+}

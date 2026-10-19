@@ -8,6 +8,7 @@ import type { Camera } from '../layers/cameras'
 import type { Quake } from '../layers/quakes'
 import type { Flight } from '../layers/flights'
 import { useStore } from '../state/store'
+import { cities } from '../map/overview'
 import { LayerGlyph } from './LayerGlyph'
 import styles from './Search.module.css'
 
@@ -22,26 +23,6 @@ interface Result {
   id?: string
 }
 
-const cities: [string, string, number, number][] = [
-  ['Jakarta', 'DKI Jakarta', 106.83, -6.2],
-  ['Surabaya', 'Jawa Timur', 112.75, -7.25],
-  ['Bandung', 'Jawa Barat', 107.61, -6.92],
-  ['Medan', 'Sumatera Utara', 98.67, 3.59],
-  ['Semarang', 'Jawa Tengah', 110.42, -6.97],
-  ['Makassar', 'Sulawesi Selatan', 119.43, -5.14],
-  ['Palembang', 'Sumatera Selatan', 104.76, -2.98],
-  ['Yogyakarta', 'DI Yogyakarta', 110.37, -7.8],
-  ['Denpasar', 'Bali', 115.22, -8.65],
-  ['Balikpapan', 'Kalimantan Timur', 116.83, -1.24],
-  ['Pontianak', 'Kalimantan Barat', 109.33, -0.03],
-  ['Manado', 'Sulawesi Utara', 124.84, 1.47],
-  ['Banda Aceh', 'Aceh', 95.32, 5.55],
-  ['Padang', 'Sumatera Barat', 100.35, -0.95],
-  ['Kupang', 'Nusa Tenggara Timur', 123.6, -10.17],
-  ['Ambon', 'Maluku', 128.18, -3.7],
-  ['Jayapura', 'Papua', 140.72, -2.53],
-  ['Nusantara', 'Kalimantan Timur', 116.7, -0.97],
-]
 
 function envelopes<T>(client: ReturnType<typeof useQueryClient>, key: string): T[] {
   return client

@@ -1,4 +1,4 @@
-import { MapView } from './map/MapView'
+import { lazy, Suspense } from 'react'
 import { TopBar } from './ui/TopBar'
 import { Rail } from './ui/Rail'
 import { LayerPanel } from './ui/LayerPanel'
@@ -10,6 +10,12 @@ import { PointWeather } from './layers/weather'
 import { Search } from './ui/Search'
 import styles from './App.module.css'
 
+const MapView = lazy(() => import('./map/MapView').then((m) => ({ default: m.MapView })))
+
+function MapFallback() {
+  return <div className={styles.mapFallback} aria-hidden="true" />
+}
+
 export default function App() {
   return (
     <div className={styles.app}>
@@ -18,9 +24,11 @@ export default function App() {
         <Search />
       </TopBar>
       <main className={styles.stage}>
-        <MapView>
-          <DataLayers />
-        </MapView>
+        <Suspense fallback={<MapFallback />}>
+          <MapView>
+            <DataLayers />
+          </MapView>
+        </Suspense>
       </main>
       <Rail>
         <LayerPanel />
