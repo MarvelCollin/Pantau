@@ -1,0 +1,13 @@
+.photo {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.text {
+  font-size: var(--text-md);
+  line-height: 1.55;
+}

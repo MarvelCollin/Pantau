@@ -1,10 +1,11 @@
 import { useQuakes } from '../layers/quakes'
+import { useVolcanoes, levelNames } from '../layers/volcanoes'
 import { useStore, useLayerOn } from '../state/store'
 import { formatAgo } from '../lib/format'
 import { useNow } from '../lib/useNow'
 import styles from './Latest.module.css'
 
-export function Latest() {
+function LatestQuakes() {
   const on = useLayerOn('quakes')
   const { data, isPending } = useQuakes(on)
   const select = useStore((s) => s.select)
@@ -55,5 +56,56 @@ export function Latest() {
         </ul>
       )}
     </section>
+  )
+}
+
+function VolcanoAlerts() {
+  const on = useLayerOn('volcanoes')
+  const { data } = useVolcanoes(on)
+  const select = useStore((s) => s.select)
+  const fly = useStore((s) => s.requestFly)
+  if (!on || !data) return null
+  const items = data.items.filter((v) => v.level >= 3)
+  if (items.length === 0) return null
+
+  return (
+    <section className={styles.latest} aria-labelledby="volcano-alerts">
+      <h2 id="volcano-alerts" className={styles.title}>
+        Volcanoes at level III or IV
+      </h2>
+      <ul className={styles.list}>
+        {items.map((v) => (
+          <li key={v.code}>
+            <button
+              type="button"
+              className={styles.item}
+              onClick={() => {
+                select({ kind: 'item', layer: 'volcanoes', id: v.code })
+                fly(v.lon, v.lat, 9)
+              }}
+            >
+              <span className={`num ${styles.mag}`} data-strong="true">
+                {levelNames[v.level].roman}
+              </span>
+              <span className={styles.text}>
+                <span className={styles.place}>{v.name}</span>
+                <span className={styles.when}>
+                  {levelNames[v.level].id}, {v.province}
+                </span>
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+export function Latest() {
+  return (
+    <>
+      <VolcanoAlerts />
+      <LatestQuakes />
+    </>
   )
 }

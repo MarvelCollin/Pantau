@@ -25,7 +25,11 @@ export async function fetchText(source: string, url: string, options: FetchOptio
     throw new UpstreamError(source, 504)
   }
   if (!res.ok) throw new UpstreamError(source, res.status)
-  return res.text()
+  try {
+    return await res.text()
+  } catch {
+    throw new UpstreamError(source, 504)
+  }
 }
 
 export async function fetchJson<T>(source: string, url: string, options: FetchOptions = {}): Promise<T> {

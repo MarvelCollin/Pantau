@@ -3,6 +3,9 @@ import { z } from 'zod'
 import { serve } from './lib/respond.js'
 import { loadQuakes } from './sources/quakes.js'
 import { loadFlights, snapCell } from './sources/flights.js'
+import { loadVolcanoes } from './sources/volcanoes.js'
+import { loadFires } from './sources/fires.js'
+import { loadReports } from './sources/reports.js'
 
 const cellQuery = z.object({
   lat: z.coerce.number().min(-85).max(85),
@@ -11,6 +14,12 @@ const cellQuery = z.object({
 
 export function registerRoutes(app: Hono) {
   app.get('/quakes', (c) => serve(c, 'quakes', { ttl: 60, swr: 120, sie: 3600 }, loadQuakes))
+
+  app.get('/volcanoes', (c) => serve(c, 'volcanoes', { ttl: 1800, swr: 3600, sie: 86400 }, loadVolcanoes))
+
+  app.get('/fires', (c) => serve(c, 'fires', { ttl: 1800, swr: 3600, sie: 86400 }, loadFires))
+
+  app.get('/reports', (c) => serve(c, 'reports', { ttl: 120, swr: 300, sie: 3600 }, loadReports))
 
   app.get('/flights', (c) => {
     const parsed = cellQuery.safeParse(c.req.query())
