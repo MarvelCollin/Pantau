@@ -78,7 +78,7 @@ function VolcanoesLayer() {
         },
         paint: {
           'icon-color': levelColor,
-          'icon-opacity': ['case', ['==', ['get', 'level'], 1], 0.6, 1],
+          'icon-opacity': ['case', ['==', ['get', 'level'], 1], 0.8, 1],
           'icon-halo-color': palette.halo,
           'icon-halo-width': 1.5,
           'text-color': levelColor,

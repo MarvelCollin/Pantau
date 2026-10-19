@@ -29,13 +29,15 @@ function hitFeature(map: MapLibre, e: MapMouseEvent) {
   return features[0]
 }
 
-function initialCamera(): { center: [number, number]; zoom: number } {
+type Camera = { center: [number, number]; zoom: number } | { bounds: [[number, number], [number, number]]; fitBoundsOptions: { padding: number } }
+
+function initialCamera(): Camera {
   const match = /view=([\d.]+)\/(-?[\d.]+)\/(-?[\d.]+)/.exec(location.hash)
   if (match) {
     const [zoom, lat, lon] = match.slice(1).map(Number)
     if ([zoom, lat, lon].every(Number.isFinite)) return { center: [lon, lat], zoom }
   }
-  return { center: [118, -2.5], zoom: 4.2 }
+  return { bounds: [[94.5, -11.2], [141.5, 6.3]], fitBoundsOptions: { padding: 16 } }
 }
 
 function addSelectionLayer(map: MapLibre) {

@@ -87,6 +87,7 @@ export function Search() {
   const input = useRef<HTMLInputElement>(null)
   const results = useResults(text)
   const listId = useId()
+  const [narrow] = useState(() => matchMedia('(max-width: 760px)').matches)
   const { select, requestFly, toggleLayer } = useStore.getState()
 
   const choose = (r: Result) => {
@@ -133,7 +134,7 @@ export function Search() {
           aria-controls={listId}
           aria-autocomplete="list"
           aria-activedescendant={showList && results[active] ? `${listId}-${active}` : undefined}
-          placeholder="Search a city, volcano, camera or flight"
+          placeholder={narrow ? 'Search' : 'Search places, volcanoes, flights'}
           value={text}
           onChange={(e) => {
             setText(e.target.value)

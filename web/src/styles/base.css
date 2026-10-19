@@ -115,7 +115,22 @@ a {
   }
 }
 
-.maplibregl-ctrl-attrib {
+.maplibregl-ctrl-attrib,
+.maplibregl-ctrl.maplibregl-ctrl-attrib {
   font-family: var(--font-body);
   font-size: var(--text-xs);
+  background: var(--raised);
+  color: var(--muted);
+}
+
+.maplibregl-ctrl-attrib a {
+  color: var(--muted);
+}
+
+.maplibregl-ctrl-attrib-button {
+  background-color: var(--raised);
+}
+
+:root[data-theme='dark'] .maplibregl-ctrl-attrib-button {
+  filter: invert(1);
 }
