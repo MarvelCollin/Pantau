@@ -1,10 +1,20 @@
-import type { ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { ArrowSquareOut } from '@phosphor-icons/react'
 import { layerInfo, type LayerId } from '../layers/registry'
 import { LayerGlyph } from './LayerGlyph'
 import styles from './Detail.module.css'
 
+const DEFAULT_TITLE = document.title
+
 export function DetailHeader({ layer, title, subtitle }: { layer: LayerId; title: ReactNode; subtitle?: ReactNode }) {
+  useEffect(() => {
+    if (typeof title !== 'string') return
+    document.title = `${title}, ${layerInfo(layer).label.toLowerCase()} | Pantau`
+    return () => {
+      document.title = DEFAULT_TITLE
+    }
+  }, [title, layer])
+
   return (
     <header className={styles.header}>
       <p className={styles.kind}>

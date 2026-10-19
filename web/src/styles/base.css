@@ -134,3 +134,70 @@ a {
 :root[data-theme='dark'] .maplibregl-ctrl-attrib-button {
   filter: invert(1);
 }
+
+.shell-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--topbar-h);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-4) 0 calc(var(--space-4) + 30px);
+  background: var(--bg);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.shell-word {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.shell-rail {
+  position: absolute;
+  top: var(--topbar-h);
+  left: 0;
+  bottom: 0;
+  width: var(--rail-w);
+  padding: var(--space-5) var(--space-4);
+  background: var(--bg);
+  border-right: 1px solid var(--hairline);
+  color: var(--muted);
+  font-size: var(--text-sm);
+  overflow: hidden;
+}
+
+.shell-rail h1 {
+  font-size: var(--text-lg);
+  color: var(--ink);
+  margin-bottom: var(--space-3);
+}
+
+.shell-rail p,
+.shell-rail ul {
+  margin: 0 0 var(--space-3);
+}
+
+.shell-rail ul {
+  padding-left: 1.1em;
+}
+
+.shell-map {
+  position: absolute;
+  top: var(--topbar-h);
+  left: var(--rail-w);
+  right: 0;
+  bottom: 0;
+  background: var(--map-water);
+}
+
+@media (max-width: 900px) {
+  .shell-rail {
+    display: none;
+  }
+
+  .shell-map {
+    left: 0;
+  }
+}
