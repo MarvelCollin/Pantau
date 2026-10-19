@@ -6,6 +6,7 @@ import { loadFlights, snapCell } from './sources/flights.js'
 import { loadVolcanoes } from './sources/volcanoes.js'
 import { loadFires } from './sources/fires.js'
 import { loadReports } from './sources/reports.js'
+import { loadCameras, resolveStream } from './sources/cameras.js'
 
 const cellQuery = z.object({
   lat: z.coerce.number().min(-85).max(85),
@@ -20,6 +21,14 @@ export function registerRoutes(app: Hono) {
   app.get('/fires', (c) => serve(c, 'fires', { ttl: 1800, swr: 3600, sie: 86400 }, loadFires))
 
   app.get('/reports', (c) => serve(c, 'reports', { ttl: 120, swr: 300, sie: 3600 }, loadReports))
+
+  app.get('/cameras', (c) => serve(c, 'cameras', { ttl: 60, swr: 120, sie: 86400 }, loadCameras))
+
+  app.get('/cameras/stream', (c) => {
+    const id = c.req.query('id') ?? ''
+    if (!/^bm-[A-Za-z0-9_-]{2,24}$/.test(id)) return c.json({ error: 'invalid_query' }, 400)
+    return serve(c, `stream:${id}`, { ttl: 6 * 3600, swr: 6 * 3600, sie: 86400 }, () => resolveStream(id))
+  })
 
   app.get('/flights', (c) => {
     const parsed = cellQuery.safeParse(c.req.query())
