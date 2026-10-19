@@ -473,7 +473,7 @@ function FlightDetail({ id }: { id: string }) {
       <Section>
         <ExternalLink href={`https://adsb.lol/?icao=${f.hex}`}>Full history on adsb.lol</ExternalLink>
         {f.callsign && <ExternalLink href={`https://www.flightaware.com/live/flight/${encodeURIComponent(f.callsign)}`}>Flight on FlightAware</ExternalLink>}
-        <p className={styles.credit}>Route and airline from adsbdb. Planned routes can differ from today's flight.</p>
+        <p className={styles.credit}>Routes are the usual schedule for this flight number and can differ from today's flight.</p>
       </Section>
     </>
   )

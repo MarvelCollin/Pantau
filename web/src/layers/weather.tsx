@@ -261,7 +261,6 @@ export function PointWeather({ lat, lon }: { lat: number; lon: number }) {
       )}
       <Section>
         <ExternalLink href={`https://www.bmkg.go.id/cuaca/prakiraan-cuaca`}>Official forecast on BMKG</ExternalLink>
-        <p className={styles.note}>Weather by Open-Meteo. Place names by BigDataCloud.</p>
       </Section>
     </>
   )

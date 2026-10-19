@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ComponentType } from 'react'
 import { Check, LinkSimple, X } from '@phosphor-icons/react'
 import { useStore } from '../state/store'
 import { layerModules } from '../layers/modules'
+import { SourceFooter } from './SourceFooter'
 import styles from './DetailPanel.module.css'
 
 export function DetailPanel({ PointDetail }: { PointDetail?: ComponentType<{ lat: number; lon: number }> }) {
@@ -62,7 +63,10 @@ export function DetailPanel({ PointDetail }: { PointDetail?: ComponentType<{ lat
       <span className="sr-only" aria-live="polite">
         {copied ? 'Link copied' : ''}
       </span>
-      <div className={`scroll ${styles.body}`}>{body}</div>
+      <div className={`scroll ${styles.body}`}>
+        {body}
+        <SourceFooter layer={selection.kind === 'item' ? selection.layer : 'point'} />
+      </div>
     </aside>
   )
 }

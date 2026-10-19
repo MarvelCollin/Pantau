@@ -36,10 +36,14 @@
   gap: var(--space-1);
 }
 
-.list li {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--space-3);
+.row {
+  display: grid;
+  grid-template-columns: 7.5em 1fr;
+  gap: var(--space-2);
+}
+
+.row dd {
+  margin: 0;
 }
 
 .what {

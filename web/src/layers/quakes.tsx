@@ -104,7 +104,7 @@ function QuakesLayer() {
     interactive: ['quakes-circle'],
   })
 
-  useLayerStatus('quakes', on, query, { count: items?.length, note: 'in the past week', staleAfterMs: 5 * 60_000 })
+  useLayerStatus('quakes', on, query, { count: items?.length, note: 'recent', staleAfterMs: 5 * 60_000 })
   return null
 }
 
@@ -135,9 +135,9 @@ function QuakeDetail({ id }: { id: string }) {
         </Section>
       )}
       <Nearby
-        title="Other earthquakes within 150 km this week"
+        title="Other recent earthquakes within 150 km"
         layer="quakes"
-        empty="No other earthquakes recorded nearby this week."
+        empty="No other recent earthquakes recorded nearby."
         items={(data?.items ?? [])
           .filter((o) => o.id !== q.id && distanceKm([o.lon, o.lat], [q.lon, q.lat]) <= 150)
           .slice(0, 8)
