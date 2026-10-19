@@ -21,7 +21,7 @@ interface AisMessage {
   Message: Record<string, Record<string, unknown>>
 }
 
-const COLLECT_MS = 6000
+const COLLECT_MS = 9000
 const KEEP_MS = 45 * 60_000
 const MAX_SHIPS = 6000
 const BOXES = [

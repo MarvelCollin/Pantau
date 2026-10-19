@@ -157,13 +157,14 @@ function FlightsLayer() {
   const selectedFlight = selected ? env?.items.find((f) => f.hex === selected) : undefined
   const route = useRoute(selectedFlight?.callsign).data
 
+  const animate = (view?.zoom ?? 0) >= 6.5
   useEffect(() => {
-    if (!on) return
+    if (!on || !animate) return
     const timer = setInterval(() => {
       if (document.visibilityState === 'visible') setTick(Date.now())
     }, 1000)
     return () => clearInterval(timer)
-  }, [on])
+  }, [on, animate])
 
   const data = useMemo<FeatureCollection>(() => {
     const features: Feature[] = []

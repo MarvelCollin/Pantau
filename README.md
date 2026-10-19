@@ -1,10 +1,49 @@
 # Pantau
 
-A live map of Indonesia built from free public data: flights, ships, satellites, earthquakes, volcano alert levels, fire hotspots, citizen flood reports, rain radar, local weather and public road cameras.
+A live map of Indonesia built only from free public data. Flights, ships, satellites, earthquakes, volcano alert levels, fire hotspots, citizen flood reports, rain radar, local weather and public road cameras, all on one map.
+
+**Live:** https://marvelcollin.com/pantau/
+
+![Pantau overview with flights, earthquakes and volcano alert levels](docs/screenshots/overview.png)
+
+## What you can see
+
+| Layer | Source | Detail panel |
+|---|---|---|
+| Flights | adsb.lol, adsb.fi | Airline, planned route with progress and arrival estimate, altitude, speed, trail, aircraft photo |
+| Ships | aisstream.io | Vessel type, speed, course, destination, trail |
+| Satellites | CelesTrak | Height, speed, orbit time, height range, inclination, past and future ground track |
+| Earthquakes | BMKG, USGS | Magnitude, depth, felt reports, tsunami note, BMKG shake map, other quakes nearby |
+| Volcanoes | MAGMA ESDM | Alert level, latest 6 hourly observation report, seismic counts, photo, advice |
+| Fire hotspots | NASA FIRMS | Fire power, confidence, hotspots within 10 km, nearest city |
+| Citizen reports | PetaBencana | Report text, photo, flood depth |
+| Rain radar and weather | RainViewer, Open-Meteo | Radar loop, current weather, air quality and the next 12 hours for any point you tap |
+| Road cameras | Bina Marga, LTA Singapore | Live HLS or YouTube stream or snapshot, nearby cameras |
+
+Every view has its own link, so the layers you turned on, the map position and the selected item can be shared.
+
+| Flight with route | Volcano report |
+|---|---|
+| ![Flight detail showing the route from Jakarta to Palembang and an aircraft photo](docs/screenshots/flight.png) | ![Merapi detail with the latest MAGMA observation report](docs/screenshots/volcano.png) |
+
+| Satellites | Fires, reports and radar in dark mode |
+|---|---|
+| ![ISS with its past and future ground track](docs/screenshots/satellites.png) | ![Fire hotspots, flood reports and rain radar on the dark theme](docs/screenshots/hazards-dark.png) |
+
+<p align="center"><img src="docs/screenshots/mobile.png" alt="Pantau on a phone with an earthquake selected" width="300" /></p>
 
 Notes on every data source, with limits and quirks, are in [research.md](research.md).
 
-Live at https://marvelcollin.com/pantau/
+## Stack
+
+```
+web/      React 19, TypeScript, Vite, MapLibre GL, TanStack Query
+server/   Hono API that proxies, trims and caches upstream sources
+api/      Vercel function entry that loads the built server
+design/   Logo sources
+```
+
+The base map below zoom 5 is drawn from simplified Natural Earth shapes bundled with the app, so the first view loads without any map tiles. Detailed OpenFreeMap vector tiles take over from zoom 5.
 
 ## Run it locally
 
@@ -16,55 +55,41 @@ cp .env.example .env
 npm run dev
 ```
 
-The web app runs on http://localhost:5173 and the API on http://localhost:8787. Vite forwards `/api` to the API.
+Open http://localhost:5173/pantau/. The API runs on http://localhost:8787 and Vite forwards `/pantau/api` to it.
 
-Ships need a free key from [aisstream.io](https://aisstream.io) (sign in with GitHub, then create a key). Put it in `.env` as `AISSTREAM_KEY`. Every other layer works without a key.
+Ships need a free key from [aisstream.io](https://aisstream.io). Sign in with GitHub, create a key, and put it in `.env` as `AISSTREAM_KEY`. Every other layer works without a key.
 
-## Deploy to Vercel (free Hobby plan)
+## Deploying
 
-1. Import the GitHub repo in Vercel. Leave the framework as "Other". `vercel.json` already sets the build command, output folder, function and region.
-2. Optional: add `AISSTREAM_KEY` under Project Settings, Environment Variables.
-3. Deploy. Every push to `main` deploys again.
+The project runs on the free Vercel Hobby plan.
 
-The function runs in `sin1` (Singapore), the closest region to Indonesia and to most of the upstream sources.
+* Work happens on the `dev` branch. Pushes to `dev` never deploy.
+* Merging `dev` into `main` deploys production once.
+* Pushes that only change Markdown files skip the build.
+* `marvelcollin.com/pantau` is served by a rewrite in the main site's project that points to this project.
 
-## How it is put together
+To deploy your own copy, import the repo in Vercel, keep the framework set to "Other" (`vercel.json` sets the rest), and add `AISSTREAM_KEY` if you want ships. Then open `/pantau/` on your deployment.
 
-```
-web/      React, TypeScript, Vite, MapLibre GL
-server/   Hono API that proxies, trims and caches upstream sources
-api/      Vercel entry that loads the built server
-```
-
-Sources that allow browser calls (RainViewer, Open-Meteo, CelesTrak, BigDataCloud) are called straight from the browser. That costs nothing on Vercel and spreads the rate limits across visitors. Everything else goes through `/api`, because it either blocks browser calls, needs a hidden key, needs scraping, or is too big to send as is.
-
-Video never passes through the server. The server only finds the stream address, and the browser plays it directly.
-
-## Caching
+## Caching and free tier use
 
 There are four layers of cache.
 
-1. Vercel CDN. Every API response sends `s-maxage`, `stale-while-revalidate` and `stale-if-error`, so most visitors are served from the edge without running the function.
-2. Function memory. Each warm instance keeps results, serves stale data while it refreshes in the background, merges identical requests that arrive together, and falls back to the last good copy when a source is down.
-3. Browser HTTP cache through `max-age`, plus ETags on every response.
-4. IndexedDB. Slow changing data (volcanoes, fires, cameras, earthquakes, satellite orbits, place names) is saved in the browser, so a returning visitor sees the map at once.
+1. Vercel CDN, through `s-maxage`, `stale-while-revalidate` and `stale-if-error` on every API response.
+2. Function memory, which serves stale data while it refreshes, merges identical requests and keeps the last good copy when a source is down.
+3. The browser HTTP cache and ETags.
+4. IndexedDB for slow changing data, so returning visitors see the map at once.
 
-| Endpoint | Fresh for | Served stale for | Kept on errors |
-|---|---|---|---|
-| `/api/flights` | 10 s | 20 s | 2 min |
-| `/api/quakes` | 1 min | 2 min | 1 h |
-| `/api/ships` | 1 min | 4 min | 30 min |
-| `/api/cameras` | 1 min | 2 min | 1 day |
-| `/api/reports` | 2 min | 5 min | 1 h |
-| `/api/fires` | 30 min | 1 h | 1 day |
-| `/api/volcanoes` | 30 min | 1 h | 1 day |
-| `/api/cameras/stream` | 6 h | 6 h | 1 day |
+| Endpoint | Fresh for | Browser polls every |
+|---|---|---|
+| `/api/flights/overview` | 45 s | 45 s, below zoom 6 |
+| `/api/flights?lat&lon` | 15 s | 20 s, from zoom 6 |
+| `/api/quakes` | 2 min | 2 min |
+| `/api/ships` | 2 min | 2 min |
+| `/api/reports`, `/api/cameras` | 4 to 5 min | 5 min |
+| `/api/fires`, `/api/volcanoes` | 30 min | 30 min |
+| `/api/volcanoes/report` | 30 min | when opened |
 
-Flights are requested in 5 degree grid cells snapped on the server, so everyone looking at the same area shares one cached response.
-
-## Staying inside the free tier
-
-Hobby allows about 1 million CDN requests a month. The app only polls a layer while it is switched on and the tab is visible. Flights refresh every 15 seconds, and other layers refresh every minute or less often. If the limit is reached, Vercel pauses the project. It does not send a bill.
+A layer only polls while it is switched on and the tab is visible. Radar, weather, satellites and flight routes are fetched straight from their public APIs in the browser, so they cost nothing on Vercel. Video never passes through the server.
 
 ## Commands
 
@@ -73,3 +98,7 @@ npm run dev         start web and API
 npm run build       build both
 npm run typecheck   type check both
 ```
+
+## Credits
+
+Data from BMKG, MAGMA ESDM, NASA FIRMS, PetaBencana, adsb.lol, adsb.fi, adsbdb, Planespotters, aisstream.io, CelesTrak, RainViewer, Open-Meteo, BigDataCloud, Bina Marga, LTA Singapore, OpenFreeMap, OpenStreetMap contributors and Natural Earth. Data can be late or wrong. For emergencies follow BMKG, BNPB and local authorities.
