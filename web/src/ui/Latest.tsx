@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { useQuakes } from '../layers/quakes'
 import { useVolcanoes, levelNames } from '../layers/volcanoes'
 import { useKarhutla, provinceTotals } from '../layers/karhutla'
+import { useAir, airCategories } from '../layers/air'
 import { useStore, useLayerOn } from '../state/store'
 import { formatAgo, formatNumber } from '../lib/format'
 import { useNow } from '../lib/useNow'
@@ -134,11 +135,54 @@ function KarhutlaProvinces() {
   )
 }
 
+function WorstAir() {
+  const on = useLayerOn('air')
+  const { data } = useAir(on)
+  const select = useStore((s) => s.select)
+  const fly = useStore((s) => s.requestFly)
+  if (!on || !data) return null
+  const items = data.items.filter((s) => s.ispu > 100).slice(0, 5)
+  if (items.length === 0) return null
+
+  return (
+    <section className={styles.latest} aria-labelledby="worst-air">
+      <h2 id="worst-air" className={styles.title}>
+        Unhealthy air right now
+      </h2>
+      <ul className={styles.list}>
+        {items.map((s) => (
+          <li key={s.id}>
+            <button
+              type="button"
+              className={styles.item}
+              onClick={() => {
+                select({ kind: 'item', layer: 'air', id: s.id })
+                fly(s.lon, s.lat, 8)
+              }}
+            >
+              <span className={`num ${styles.mag}`} data-level={s.ispu > 200 ? 4 : 3}>
+                {s.ispu}
+              </span>
+              <span className={styles.text}>
+                <span className={styles.place}>{s.city}</span>
+                <span className={styles.when}>
+                  {airCategories[s.category].en}, {s.province}
+                </span>
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
 export function Latest() {
   return (
     <>
       <VolcanoAlerts />
       <KarhutlaProvinces />
+      <WorstAir />
       <LatestQuakes />
     </>
   )

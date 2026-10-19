@@ -81,6 +81,13 @@ const legends: Partial<Record<LayerId, Item[]>> = {
     { shape: 'diamond', color: c('reports'), label: 'Fire' },
     { shape: 'triangle', color: c('reports'), label: 'Volcanic' },
   ],
+  air: [
+    { shape: 'circle', color: 'var(--lvl-1)', label: 'Good' },
+    { shape: 'circle', color: c('reports'), label: 'Moderate' },
+    { shape: 'circle', color: 'var(--lvl-2)', label: 'Unhealthy' },
+    { shape: 'circle', color: 'var(--lvl-4)', label: 'Very unhealthy' },
+    { shape: 'circle', color: 'var(--ink)', label: 'Hazardous' },
+  ],
   cameras: [
     { shape: 'square', color: c('cameras'), label: 'Online' },
     { shape: 'square', color: c('cameras'), label: 'Offline', faded: true },

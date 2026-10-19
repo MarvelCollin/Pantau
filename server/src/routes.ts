@@ -9,6 +9,7 @@ import { loadFires } from './sources/fires.js'
 import { loadReports } from './sources/reports.js'
 import { loadKarhutla } from './sources/karhutla.js'
 import { loadFireCrews } from './sources/fireCrews.js'
+import { loadAir } from './sources/air.js'
 import { loadCameras, resolveStream } from './sources/cameras.js'
 import { loadShips } from './sources/ships.js'
 
@@ -41,6 +42,8 @@ export function registerRoutes(app: Hono) {
   app.get('/karhutla', (c) => serve(c, 'karhutla', { ttl: 900, swr: 1800, sie: 86400 }, loadKarhutla))
 
   app.get('/karhutla/crews', (c) => serve(c, 'karhutla:crews', { ttl: 1800, swr: 3600, sie: 86400 }, loadFireCrews))
+
+  app.get('/air', (c) => serve(c, 'air', { ttl: 900, swr: 1800, sie: 21600 }, loadAir))
 
   app.get('/reports', (c) => serve(c, 'reports', { ttl: 300, swr: 600, sie: 3600 }, loadReports))
 

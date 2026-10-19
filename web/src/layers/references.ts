@@ -29,6 +29,7 @@ export const references: Record<LayerId | 'point' | 'basemap', Reference[]> = {
   firecrews: [{ name: 'SiPongi+, Ministry of Forestry', what: 'Manggala Agni posts, firefighting and ground check reports', url: 'https://sipongi.gakkum.kehutanan.go.id/hard-manggala-agni' }],
   reports: [{ name: 'PetaBencana', what: 'Citizen disaster reports', url: 'https://docs.petabencana.id' }],
   weather: [{ name: 'RainViewer', what: 'Rain radar tiles', url: 'https://www.rainviewer.com/api.html' }],
+  air: [{ name: 'SiPongi+ AQMS, Ministry of Environment and Forestry', what: 'Hourly ISPU from air quality stations', url: 'https://sipongi.gakkum.kehutanan.go.id' }],
   cameras: [
     { name: 'Jogja City ATCS', what: 'Yogyakarta city cameras', url: 'https://cctv.jogjakota.go.id' },
     { name: 'Bina Marga, PUPR', what: 'National road cameras', url: 'https://binamarga.pu.go.id' },

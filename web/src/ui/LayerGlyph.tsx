@@ -1,4 +1,4 @@
-import { AirplaneTilt, Boat, Planet, Pulse, Mountains, Fire, FireSimple, FireTruck, Drop, CloudRain, VideoCamera } from '@phosphor-icons/react'
+import { AirplaneTilt, Boat, Planet, Pulse, Mountains, Fire, FireSimple, FireTruck, Drop, CloudRain, VideoCamera, Wind } from '@phosphor-icons/react'
 import type { LayerId } from '../layers/registry'
 
 const glyphs = {
@@ -12,6 +12,7 @@ const glyphs = {
   firecrews: FireTruck,
   reports: Drop,
   weather: CloudRain,
+  air: Wind,
   cameras: VideoCamera,
 } satisfies Record<LayerId, unknown>
 

@@ -26,6 +26,7 @@ A live map of Indonesia built only from free public data. Flights, ships, satell
 | Karhutla | SiPongi+ Kemenhut | Village, district, regency and province, confidence, satellite, hotspot count for the regency, top provinces in the side panel |
 | Fire crews | SiPongi+ Kemenhut | Manggala Agni field posts, firefighting reports with area put out, ground check findings, field notes |
 | Citizen reports | PetaBencana | Report text, photo, flood depth |
+| Air quality | SiPongi+ AQMS | Hourly ISPU per station with category, health advice and nearest other station, worst stations in the side panel |
 | Rain radar and weather | RainViewer, Open-Meteo | Radar loop, current weather, air quality and the next 12 hours for any point you tap |
 | Cameras | Jogja City, Bina Marga, LTA Singapore | 152 live city cameras in Yogyakarta, national road streams and Singapore snapshots, nearby cameras |
 
@@ -95,7 +96,7 @@ There are four layers of cache.
 | `/api/quakes` | 2 min | 2 min |
 | `/api/ships` | 2 min | 2 min |
 | `/api/reports`, `/api/cameras` | 4 to 5 min | 5 min |
-| `/api/karhutla` | 15 min | 15 min |
+| `/api/karhutla`, `/api/air` | 15 min | 15 min |
 | `/api/karhutla/crews`, `/api/fires`, `/api/volcanoes` | 30 min | 30 min |
 | `/api/volcanoes/report` | 30 min | when opened |
 

@@ -9,6 +9,7 @@ export type LayerId =
   | 'firecrews'
   | 'reports'
   | 'weather'
+  | 'air'
   | 'cameras'
 
 export type LayerGroup = 'Moving' | 'Hazards' | 'Weather and cameras'
@@ -33,6 +34,7 @@ export const layers: LayerInfo[] = [
   { id: 'firecrews', label: 'Fire crews', group: 'Hazards', hint: 'Manggala Agni posts, firefighting and ground checks, past 30 days', source: 'SiPongi+ Kemenhut', sourceUrl: 'https://sipongi.gakkum.kehutanan.go.id' },
   { id: 'reports', label: 'Citizen reports', group: 'Hazards', hint: 'Flood, haze and fire reports, past 3 days', source: 'PetaBencana', sourceUrl: 'https://petabencana.id' },
   { id: 'weather', label: 'Rain radar', group: 'Weather and cameras', hint: 'Radar loop over Indonesia', source: 'RainViewer, Open-Meteo', sourceUrl: 'https://www.rainviewer.com' },
+  { id: 'air', label: 'Air quality', group: 'Weather and cameras', hint: 'ISPU stations, haze from forest and land fires', source: 'SiPongi+ AQMS', sourceUrl: 'https://sipongi.gakkum.kehutanan.go.id' },
   { id: 'cameras', label: 'Cameras', group: 'Weather and cameras', hint: 'Live public cameras in Yogyakarta, national roads and Singapore', source: 'Jogja City, Bina Marga, LTA', sourceUrl: 'https://binamarga.pu.go.id' },
 ]
 

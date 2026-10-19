@@ -35,6 +35,7 @@
   --c-reports: #006c9d;
   --c-cameras: #1b3235;
   --c-weather: #005962;
+  --c-air: #4f6a2a;
 
   --font-display: 'Bricolage Grotesque Variable', 'IBM Plex Sans', system-ui, sans-serif;
   --font-body: 'IBM Plex Sans', system-ui, sans-serif;
@@ -111,6 +112,7 @@
   --c-reports: #6dbbe8;
   --c-cameras: #e4edee;
   --c-weather: #8dd2da;
+  --c-air: #c3d98a;
 
   --elev-1: 0 1px 2px rgb(0 0 0 / 0.4), 0 2px 8px rgb(0 0 0 / 0.3);
   --elev-2: 0 4px 12px rgb(0 0 0 / 0.45), 0 12px 32px rgb(0 0 0 / 0.4);
