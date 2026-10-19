@@ -1,0 +1,24 @@
+.tip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: var(--z-tooltip);
+  pointer-events: none;
+  max-width: 260px;
+  padding: var(--space-1) var(--space-2);
+  background: var(--ink);
+  color: var(--bg);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  border-radius: var(--radius-xs);
+  box-shadow: var(--elev-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (hover: none) {
+  .tip {
+    display: none;
+  }
+}

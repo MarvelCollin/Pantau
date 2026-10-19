@@ -1,0 +1,52 @@
+.sources {
+  margin-top: auto;
+  padding: 0 var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--muted);
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  list-style: none;
+}
+
+.summary::-webkit-details-marker {
+  display: none;
+}
+
+.summary::after {
+  content: '+';
+  margin-left: var(--space-2);
+  font-family: var(--font-mono);
+}
+
+.sources[open] .summary::after {
+  content: '-';
+}
+
+.list {
+  list-style: none;
+  margin: var(--space-2) 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.list li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.what {
+  color: var(--muted);
+}
+
+.note {
+  color: var(--muted);
+  margin-top: var(--space-2);
+}

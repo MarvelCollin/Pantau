@@ -1,0 +1,107 @@
+:root {
+  color-scheme: light;
+  --bg: #f1f8f9;
+  --surface: #e3f2f4;
+  --raised: #fbfdfd;
+  --tint: #c7e9ec;
+  --soft: #9cd6dd;
+  --line: #4d858b;
+  --hairline: #cfe0e2;
+  --strong: #005962;
+  --ink: #0b2326;
+  --muted: #4b5f61;
+  --accent-soft: #f9c9a9;
+  --accent-strong: #8d481a;
+  --danger: #ac3031;
+  --warning: #845a0f;
+  --success: #31693f;
+  --scrim: rgb(11 35 38 / 0.32);
+
+  --c-flights: #006278;
+  --c-ships: #20508a;
+  --c-satellites: #286648;
+  --c-quakes: #b63132;
+  --c-volcanoes: #9d4616;
+  --c-fires: #c26f00;
+  --c-reports: #006c9d;
+  --c-cameras: #1b3235;
+  --c-weather: #005962;
+
+  --font-display: 'Bricolage Grotesque Variable', 'IBM Plex Sans', system-ui, sans-serif;
+  --font-body: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-md: 0.9375rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 2rem;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  --radius-xs: 3px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+
+  --elev-1: 0 1px 2px rgb(11 35 38 / 0.08), 0 2px 8px rgb(11 35 38 / 0.06);
+  --elev-2: 0 4px 12px rgb(11 35 38 / 0.12), 0 12px 32px rgb(11 35 38 / 0.1);
+
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --dur-fast: 150ms;
+  --dur-med: 220ms;
+
+  --z-map-ui: 10;
+  --z-panel: 20;
+  --z-sheet: 40;
+  --z-tooltip: 100;
+
+  --topbar-h: 52px;
+  --rail-w: 320px;
+  --detail-w: 380px;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #0e1819;
+  --surface: #142122;
+  --raised: #1a2a2c;
+  --tint: #1b3235;
+  --soft: #22494e;
+  --line: #628f94;
+  --hairline: #2a3d40;
+  --strong: #8dd2da;
+  --ink: #e4edee;
+  --muted: #9dafb1;
+  --accent-soft: #6a4225;
+  --accent-strong: #f0ad7f;
+  --danger: #f7857d;
+  --warning: #e3b667;
+  --success: #88ca95;
+  --scrim: rgb(0 0 0 / 0.5);
+
+  --c-flights: #7cd8e8;
+  --c-ships: #97c1f7;
+  --c-satellites: #8fdfb4;
+  --c-quakes: #f47b74;
+  --c-volcanoes: #ee9a69;
+  --c-fires: #f9b64f;
+  --c-reports: #6dbbe8;
+  --c-cameras: #e4edee;
+  --c-weather: #8dd2da;
+
+  --elev-1: 0 1px 2px rgb(0 0 0 / 0.4), 0 2px 8px rgb(0 0 0 / 0.3);
+  --elev-2: 0 4px 12px rgb(0 0 0 / 0.45), 0 12px 32px rgb(0 0 0 / 0.4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0ms;
+    --dur-med: 0ms;
+  }
+}

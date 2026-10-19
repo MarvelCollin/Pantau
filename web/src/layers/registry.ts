@@ -1,0 +1,41 @@
+export type LayerId =
+  | 'flights'
+  | 'ships'
+  | 'satellites'
+  | 'quakes'
+  | 'volcanoes'
+  | 'fires'
+  | 'reports'
+  | 'weather'
+  | 'cameras'
+
+export type LayerGroup = 'Moving' | 'Hazards' | 'Sky' | 'Eyes'
+
+export interface LayerInfo {
+  id: LayerId
+  label: string
+  group: LayerGroup
+  hint: string
+  source: string
+  sourceUrl: string
+}
+
+export const layers: LayerInfo[] = [
+  { id: 'flights', label: 'Flights', group: 'Moving', hint: 'Aircraft broadcasting ADS-B', source: 'adsb.lol', sourceUrl: 'https://adsb.lol' },
+  { id: 'ships', label: 'Ships', group: 'Moving', hint: 'Vessels broadcasting AIS', source: 'aisstream.io', sourceUrl: 'https://aisstream.io' },
+  { id: 'satellites', label: 'Satellites', group: 'Moving', hint: 'Space stations and bright satellites', source: 'CelesTrak', sourceUrl: 'https://celestrak.org' },
+  { id: 'quakes', label: 'Earthquakes', group: 'Hazards', hint: 'BMKG and USGS, past week', source: 'BMKG, USGS', sourceUrl: 'https://data.bmkg.go.id/gempabumi/' },
+  { id: 'volcanoes', label: 'Volcanoes', group: 'Hazards', hint: 'Alert level of 69 monitored volcanoes', source: 'MAGMA ESDM', sourceUrl: 'https://magma.esdm.go.id' },
+  { id: 'fires', label: 'Fire hotspots', group: 'Hazards', hint: 'VIIRS satellite detections, past 24 hours', source: 'NASA FIRMS', sourceUrl: 'https://firms.modaps.eosdis.nasa.gov' },
+  { id: 'reports', label: 'Citizen reports', group: 'Hazards', hint: 'Flood, haze and fire reports, past 3 days', source: 'PetaBencana', sourceUrl: 'https://petabencana.id' },
+  { id: 'weather', label: 'Rain radar', group: 'Sky', hint: 'Radar loop, tap the map for local weather', source: 'RainViewer, Open-Meteo', sourceUrl: 'https://www.rainviewer.com' },
+  { id: 'cameras', label: 'Road cameras', group: 'Eyes', hint: 'Public national road and Singapore traffic cameras', source: 'Bina Marga, LTA', sourceUrl: 'https://binamarga.pu.go.id' },
+]
+
+export const layerIds = layers.map((l) => l.id)
+
+export const defaultLayers: LayerId[] = ['flights', 'quakes', 'volcanoes']
+
+export function layerInfo(id: LayerId): LayerInfo {
+  return layers.find((l) => l.id === id)!
+}
