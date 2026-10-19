@@ -89,5 +89,5 @@
       "dev": false
     }
   },
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- . ':(exclude)*.md'"
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- . ':(exclude)*.md' ':(exclude)design' ':(exclude)docs' ':(exclude).gitattributes'"
 }
