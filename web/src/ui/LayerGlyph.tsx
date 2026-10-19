@@ -1,4 +1,4 @@
-import { AirplaneTilt, Boat, Planet, Pulse, Mountains, Fire, Drop, CloudRain, VideoCamera } from '@phosphor-icons/react'
+import { AirplaneTilt, Boat, Planet, Pulse, Mountains, Fire, FireSimple, Drop, CloudRain, VideoCamera } from '@phosphor-icons/react'
 import type { LayerId } from '../layers/registry'
 
 const glyphs = {
@@ -8,6 +8,7 @@ const glyphs = {
   quakes: Pulse,
   volcanoes: Mountains,
   fires: Fire,
+  karhutla: FireSimple,
   reports: Drop,
   weather: CloudRain,
   cameras: VideoCamera,

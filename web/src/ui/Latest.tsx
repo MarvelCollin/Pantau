@@ -1,7 +1,9 @@
+import { useMemo } from 'react'
 import { useQuakes } from '../layers/quakes'
 import { useVolcanoes, levelNames } from '../layers/volcanoes'
+import { useKarhutla, provinceTotals } from '../layers/karhutla'
 import { useStore, useLayerOn } from '../state/store'
-import { formatAgo } from '../lib/format'
+import { formatAgo, formatNumber } from '../lib/format'
 import { useNow } from '../lib/useNow'
 import styles from './Latest.module.css'
 
@@ -101,10 +103,42 @@ function VolcanoAlerts() {
   )
 }
 
+function KarhutlaProvinces() {
+  const on = useLayerOn('karhutla')
+  const { data } = useKarhutla(on)
+  const fly = useStore((s) => s.requestFly)
+  const rows = useMemo(() => (data ? provinceTotals(data.items, 'h').slice(0, 5) : []), [data])
+  if (!on || rows.length === 0) return null
+
+  return (
+    <section className={styles.latest} aria-labelledby="karhutla-provinces">
+      <h2 id="karhutla-provinces" className={styles.title}>
+        High confidence karhutla hotspots by province
+      </h2>
+      <ul className={styles.list}>
+        {rows.map((r) => (
+          <li key={r.province}>
+            <button type="button" className={styles.item} onClick={() => fly(r.lon, r.lat, 6.5)}>
+              <span className={`num ${styles.mag}`} data-level={4}>
+                {formatNumber(r.count)}
+              </span>
+              <span className={styles.text}>
+                <span className={styles.place}>{r.province}</span>
+                <span className={styles.when}>past 24 hours, SiPongi+</span>
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
 export function Latest() {
   return (
     <>
       <VolcanoAlerts />
+      <KarhutlaProvinces />
       <LatestQuakes />
     </>
   )

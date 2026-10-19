@@ -42,6 +42,16 @@ Fires
 
 NASA FIRMS serves a 24 hour VIIRS hotspot CSV for Southeast Asia with no key at https://firms.modaps.eosdis.nasa.gov/data/active_fire/suomi-npp-viirs-c2/csv/SUOMI_VIIRS_C2_SouthEast_Asia_24h.csv. It is about 1 MB and has no CORS header. The area API needs a free map key.
 
+Karhutla (forest and land fires)
+
+SiPongi+ is the Ministry of Forestry (Kemenhut) karhutla system. The old sipongi.menlhk.go.id name no longer resolves since the ministry split. The site now lives at https://sipongi.gakkum.kehutanan.go.id and its map reads from an open API at https://opsroom.sipongidata.my.id/api. No key, CORS open to any origin, gzip responses.
+
+/api/opsroom/indoHotspot?wilayah=IN&filterperiode=false&late=24&satelit[]=NASA-MODIS&satelit[]=NASA-SNPP&satelit[]=NASA-NOAA20&confidence[]=high&confidence[]=medium&confidence[]=low&provinsi=&kabkota= returns GeoJSON hotspots for the past 24 hours, about 17,000 points, 10 MB raw and 0.5 MB gzipped in the dry season. Pantau trims it to about 0.9 MB by listing each village once. Each point carries desa, kecamatan, kabkota, nama_provinsi, confidence_level, sumber (satellite) and date_hotspot_ori in UTC. The satellites LPN-NPP, LPN-NOAA20, LPN-MODIS and LPN-LANDSAT8 are the same passes processed by BRIN's ground station, so mixing them with the NASA ones counts each fire twice. provinsi and kabkota take the ids from /api/getProvinsi/all to filter.
+/api/getSummaryHotspot?wilayah=IN&late=24 gives counts per satellite and confidence level.
+/api/overlay/rawan/hotspot holds fire prone area overlays, /api/boundaries?level=provinsi or kabupaten on opsroom-sipongi.gakkum.kehutanan.go.id holds admin boundaries.
+
+BRIN runs its own hotspot viewer at https://hotspot.brin.go.id with /getHS and /getHSdetail behind it, built for its own map. BMKG publishes hotspot maps at https://www.bmkg.go.id/cuaca/satelit/polar-hotspot but returns 403 to scripts. BNPB shows SiPongi+ data on https://gis.bnpb.go.id/karhutla2026.
+
 Floods and crowd reports
 
 PetaBencana at https://data.petabencana.id/reports?geoformat=geojson returns recent citizen reports of floods, fires, haze, quakes, wind and volcanic activity with photos. No key.

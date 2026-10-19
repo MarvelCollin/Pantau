@@ -66,6 +66,11 @@ const legends: Partial<Record<LayerId, Item[]>> = {
     { shape: 'circle', color: c('fires'), label: 'Small', size: 7 },
     { shape: 'circle', color: c('fires'), label: 'Intense', size: 13 },
   ],
+  karhutla: [
+    { shape: 'circle', color: 'var(--lvl-2)', label: 'Low', size: 8 },
+    { shape: 'circle', color: 'var(--lvl-3)', label: 'Medium', size: 10 },
+    { shape: 'circle', color: 'var(--lvl-4)', label: 'High confidence', size: 12 },
+  ],
   reports: [
     { shape: 'drop', color: c('reports'), label: 'Flood or haze' },
     { shape: 'diamond', color: c('reports'), label: 'Fire' },

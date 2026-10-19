@@ -7,6 +7,7 @@ import { loadVolcanoes } from './sources/volcanoes.js'
 import { loadVolcanoReport } from './sources/volcanoReport.js'
 import { loadFires } from './sources/fires.js'
 import { loadReports } from './sources/reports.js'
+import { loadKarhutla } from './sources/karhutla.js'
 import { loadCameras, resolveStream } from './sources/cameras.js'
 import { loadShips } from './sources/ships.js'
 
@@ -35,6 +36,8 @@ export function registerRoutes(app: Hono) {
   })
 
   app.get('/fires', (c) => serve(c, 'fires', { ttl: 1800, swr: 3600, sie: 86400 }, loadFires))
+
+  app.get('/karhutla', (c) => serve(c, 'karhutla', { ttl: 900, swr: 1800, sie: 86400 }, loadKarhutla))
 
   app.get('/reports', (c) => serve(c, 'reports', { ttl: 300, swr: 600, sie: 3600 }, loadReports))
 
