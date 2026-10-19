@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
-import type { UseQueryResult } from '@tanstack/react-query'
-import { ApiError, type Envelope } from '../lib/api'
+import { ApiError } from '../lib/api'
 import { useStore, type LayerState } from '../state/store'
 import type { LayerId } from './registry'
 
@@ -11,7 +10,13 @@ interface Options {
   override?: LayerState
 }
 
-export function useLayerStatus(id: LayerId, on: boolean, query: UseQueryResult<Envelope<unknown>>, options: Options) {
+export interface StatusSource {
+  data?: { fetchedAt: number }
+  isError: boolean
+  error: unknown
+}
+
+export function useLayerStatus(id: LayerId, on: boolean, query: StatusSource, options: Options) {
   const setStatus = useStore((s) => s.setStatus)
   const fetchedAt = query.data?.fetchedAt
   const { count, note, staleAfterMs, override } = options

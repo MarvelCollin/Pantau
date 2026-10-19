@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react'
 import type { LayerId } from './registry'
 import { quakesModule } from './quakes'
+import { flightsModule } from './flights'
 
 export interface LayerModule {
   Layer: ComponentType
@@ -8,5 +9,6 @@ export interface LayerModule {
 }
 
 export const layerModules: Partial<Record<LayerId, LayerModule>> = {
+  flights: flightsModule,
   quakes: quakesModule,
 }

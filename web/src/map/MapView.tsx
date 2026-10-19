@@ -29,6 +29,15 @@ function hitFeature(map: MapLibre, e: MapMouseEvent) {
   return features[0]
 }
 
+function initialCamera(): { center: [number, number]; zoom: number } {
+  const match = /view=([\d.]+)\/(-?[\d.]+)\/(-?[\d.]+)/.exec(location.hash)
+  if (match) {
+    const [zoom, lat, lon] = match.slice(1).map(Number)
+    if ([zoom, lat, lon].every(Number.isFinite)) return { center: [lon, lat], zoom }
+  }
+  return { center: [118, -2.5], zoom: 4.2 }
+}
+
 function addSelectionLayer(map: MapLibre) {
   map.addSource('selection', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
   map.addLayer({
@@ -47,6 +56,7 @@ function addSelectionLayer(map: MapLibre) {
 
 export function MapView({ children }: { children: ReactNode }) {
   const container = useRef<HTMLDivElement>(null)
+  const camera = useRef(initialCamera())
   const [map, setMap] = useState<MapLibre | null>(null)
   const [tooltip, setTooltip] = useState<TooltipState | null>(null)
   const theme = useStore((s) => s.theme)
@@ -57,8 +67,7 @@ export function MapView({ children }: { children: ReactNode }) {
     const instance = new MapLibre({
       container: container.current,
       style: BASEMAP_STYLE,
-      center: [118, -2.5],
-      zoom: 4.2,
+      ...camera.current,
       minZoom: 2,
       maxZoom: 17,
       hash: 'view',
