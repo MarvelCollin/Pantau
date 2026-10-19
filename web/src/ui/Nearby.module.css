@@ -16,7 +16,7 @@
   align-items: baseline;
   gap: var(--space-3);
   width: 100%;
-  min-height: 40px;
+  min-height: 44px;
   padding: var(--space-2);
   margin: 0 calc(var(--space-2) * -1);
   width: calc(100% + var(--space-4));

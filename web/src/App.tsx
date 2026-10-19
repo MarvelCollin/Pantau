@@ -20,6 +20,7 @@ function MapFallback() {
 export default function App() {
   return (
     <div className={styles.app}>
+      <a className="skip-link" href="#rail-body">Skip to layers</a>
       <h1 className="sr-only">Pantau, live map of Indonesia</h1>
       <TopBar>
         <Search />

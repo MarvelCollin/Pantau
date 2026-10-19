@@ -18,6 +18,10 @@
   --scrim: rgb(11 35 38 / 0.32);
   --map-water: #b4dce7;
   --brand-lid: #1f4d55;
+  --lvl-1: #448247;
+  --lvl-2: #9c7b00;
+  --lvl-3: #d06300;
+  --lvl-4: #c22826;
   --brand-pupil: #c8582a;
 
   --c-flights: #006278;
@@ -88,6 +92,10 @@
   --scrim: rgb(0 0 0 / 0.5);
   --map-water: #031218;
   --brand-lid: #bfe3e8;
+  --lvl-1: #78bf7b;
+  --lvl-2: #e9c944;
+  --lvl-3: #f99532;
+  --lvl-4: #f66d62;
   --brand-pupil: #f2b98f;
 
   --c-flights: #7cd8e8;

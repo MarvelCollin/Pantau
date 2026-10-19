@@ -71,9 +71,10 @@ function QuakesLayer() {
         paint: {
           'circle-radius': ['interpolate', ['linear'], ['get', 'mag'], 2.5, 3, 5, 8, 7, 18],
           'circle-color': color,
-          'circle-opacity': ['case', ['==', ['get', 'recent'], 1], 0.55, 0.22],
+          'circle-opacity': ['case', ['==', ['get', 'recent'], 1], 0.55, 0],
           'circle-stroke-color': color,
-          'circle-stroke-width': ['case', ['==', ['get', 'recent'], 1], 2, 1],
+          'circle-stroke-width': ['case', ['==', ['get', 'recent'], 1], 2, 1.5],
+          'circle-stroke-opacity': ['case', ['==', ['get', 'recent'], 1], 1, 0.75],
         },
       },
       {

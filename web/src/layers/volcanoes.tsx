@@ -62,7 +62,7 @@ function VolcanoesLayer() {
   )
 
   const specs = useMemo(() => {
-    const levelColor = ['match', ['get', 'level'], 4, palette.danger, 3, cssVar('--accent-strong'), 2, palette.warning, palette.color('volcanoes')]
+    const levelColor = ['match', ['get', 'level'], 4, cssVar('--lvl-4'), 3, cssVar('--lvl-3'), 2, cssVar('--lvl-2'), cssVar('--lvl-1')]
     return [
       {
         id: 'volcanoes-icon',
@@ -72,7 +72,7 @@ function VolcanoesLayer() {
           'icon-size': ['match', ['get', 'level'], 4, 0.85, 3, 0.75, 2, 0.6, 0.48],
           'icon-allow-overlap': true,
           'symbol-sort-key': ['-', 0, ['get', 'level']],
-          'text-field': ['case', ['>=', ['get', 'level'], 2], ['get', 'roman'], ''],
+          'text-field': ['step', ['zoom'], ['case', ['>=', ['get', 'level'], 3], ['get', 'roman'], ''], 7, ['case', ['>=', ['get', 'level'], 2], ['get', 'roman'], '']],
           'text-font': ['Noto Sans Bold'],
           'text-size': 11,
           'text-offset': [0, 1.3],
@@ -81,7 +81,7 @@ function VolcanoesLayer() {
         },
         paint: {
           'icon-color': levelColor,
-          'icon-opacity': ['case', ['==', ['get', 'level'], 1], 0.8, 1],
+          'icon-opacity': 1,
           'icon-halo-color': palette.halo,
           'icon-halo-width': 1.5,
           'text-color': levelColor,

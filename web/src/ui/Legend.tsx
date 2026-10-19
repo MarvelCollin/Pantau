@@ -18,7 +18,7 @@ function Glyph({ shape, color, size = 12, faded }: { shape: Shape; color: string
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden="true" style={{ opacity, flex: 'none' }}>
       {shape === 'circle' && <circle cx="8" cy="8" r="6" fill={color} fillOpacity="0.5" stroke={color} strokeWidth="1.6" />}
-      {shape === 'ring' && <circle cx="8" cy="8" r="6" fill={color} fillOpacity="0.18" stroke={color} strokeWidth="1" />}
+      {shape === 'ring' && <circle cx="8" cy="8" r="6" fill="none" stroke={color} strokeWidth="1.4" />}
       {shape === 'dash' && <path d="M1 8h14" stroke={color} strokeWidth="2" strokeDasharray="3 2" />}
       {shape !== 'circle' && shape !== 'ring' && shape !== 'dash' && <path d={paths[shape]} fill={color} />}
     </svg>
@@ -57,10 +57,10 @@ const legends: Partial<Record<LayerId, Item[]>> = {
     { shape: 'ring', color: c('quakes'), label: 'Older than a day', size: 12 },
   ],
   volcanoes: [
-    { shape: 'triangle', color: c('volcanoes'), label: 'I Normal', faded: true },
-    { shape: 'triangle', color: 'var(--warning)', label: 'II Advisory' },
-    { shape: 'triangle', color: 'var(--accent-strong)', label: 'III Watch' },
-    { shape: 'triangle', color: 'var(--danger)', label: 'IV Warning' },
+    { shape: 'triangle', color: 'var(--lvl-1)', label: 'I Normal' },
+    { shape: 'triangle', color: 'var(--lvl-2)', label: 'II Advisory' },
+    { shape: 'triangle', color: 'var(--lvl-3)', label: 'III Watch' },
+    { shape: 'triangle', color: 'var(--lvl-4)', label: 'IV Warning' },
   ],
   fires: [
     { shape: 'circle', color: c('fires'), label: 'Small', size: 7 },

@@ -48,6 +48,14 @@
   color: var(--c-quakes);
 }
 
+.mag[data-level='3'] {
+  color: var(--lvl-3);
+}
+
+.mag[data-level='4'] {
+  color: var(--lvl-4);
+}
+
 .text {
   display: flex;
   flex-direction: column;

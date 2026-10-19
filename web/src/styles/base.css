@@ -115,8 +115,9 @@ a {
   }
 }
 
-.maplibregl-ctrl-attrib,
-.maplibregl-ctrl.maplibregl-ctrl-attrib {
+.maplibregl-map .maplibregl-ctrl.maplibregl-ctrl-attrib,
+.maplibregl-map .maplibregl-ctrl-attrib.maplibregl-compact-show,
+.maplibregl-map .maplibregl-ctrl-attrib.maplibregl-compact {
   font-family: var(--font-body);
   font-size: var(--text-xs);
   background: var(--raised);
@@ -201,4 +202,21 @@ a {
   .shell-map {
     left: 0;
   }
+}
+
+.skip-link {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-2);
+  z-index: 1000;
+  padding: var(--space-2) var(--space-3);
+  background: var(--ink);
+  color: var(--bg);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  transform: translateY(-200%);
+}
+
+.skip-link:focus-visible {
+  transform: none;
 }

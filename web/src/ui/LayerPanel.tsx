@@ -8,7 +8,7 @@ import { Legend } from './Legend'
 import { prefetchLayer } from '../layers/prefetch'
 import styles from './LayerPanel.module.css'
 
-const groups: LayerGroup[] = ['Moving', 'Hazards', 'Sky', 'Eyes']
+const groups: LayerGroup[] = ['Moving', 'Hazards', 'Weather and cameras']
 
 function StatusLine({ info, status, on, now }: { info: LayerInfo; status?: LayerStatus; on: boolean; now: number }) {
   if (!on) return <span className={styles.hint}>{info.hint}</span>
@@ -63,8 +63,8 @@ export function LayerPanel() {
   return (
     <nav className={styles.panel} aria-label="Map layers">
       {groups.map((group) => (
-        <section key={group} className={styles.group} aria-labelledby={`group-${group}`}>
-          <h2 id={`group-${group}`} className={styles.groupLabel}>
+        <section key={group} className={styles.group} aria-labelledby={`group-${group.replaceAll(' ', '-')}`}>
+          <h2 id={`group-${group.replaceAll(' ', '-')}`} className={styles.groupLabel}>
             {group}
           </h2>
           <ul className={styles.list}>

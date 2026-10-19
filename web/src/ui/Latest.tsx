@@ -84,7 +84,7 @@ function VolcanoAlerts() {
                 fly(v.lon, v.lat, 9)
               }}
             >
-              <span className={`num ${styles.mag}`} data-strong="true">
+              <span className={`num ${styles.mag}`} data-level={v.level}>
                 {levelNames[v.level].roman}
               </span>
               <span className={styles.text}>

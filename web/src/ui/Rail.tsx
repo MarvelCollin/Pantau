@@ -24,7 +24,7 @@ export function Rail({ children }: { children: ReactNode }) {
         </span>
         <CaretDown size={16} weight="bold" className={styles.caret} aria-hidden="true" />
       </button>
-      <div id="rail-body" className={`scroll ${styles.body}`}>
+      <div id="rail-body" className={`scroll ${styles.body}`} tabIndex={-1}>
         {children}
       </div>
     </div>
