@@ -17,6 +17,8 @@
   --success: #31693f;
   --scrim: rgb(11 35 38 / 0.32);
   --map-water: #b4dce7;
+  --brand-lid: #1f4d55;
+  --brand-pupil: #c8582a;
 
   --c-flights: #006278;
   --c-ships: #20508a;
@@ -85,6 +87,8 @@
   --success: #88ca95;
   --scrim: rgb(0 0 0 / 0.5);
   --map-water: #031218;
+  --brand-lid: #bfe3e8;
+  --brand-pupil: #f2b98f;
 
   --c-flights: #7cd8e8;
   --c-ships: #97c1f7;

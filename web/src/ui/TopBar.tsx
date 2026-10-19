@@ -14,9 +14,11 @@ export function TopBar({ children }: { children?: ReactNode }) {
   return (
     <header className={styles.bar}>
       <a className={styles.brand} href={import.meta.env.BASE_URL} aria-label="Pantau home">
-        <svg viewBox="0 0 32 32" width="22" height="22" aria-hidden="true">
-          <circle cx="16" cy="16" r="10" fill="none" stroke="currentColor" strokeWidth="3" />
-          <circle cx="16" cy="16" r="3.5" fill="var(--accent-strong)" />
+        <svg viewBox="0 0 256 256" width="26" height="26" aria-hidden="true">
+          <g transform="translate(0 -4.14)">
+            <path fill="var(--brand-lid)" fillRule="evenodd" d="M16.7 150.7L116.7 50.7A16 16 0 0 1 139.3 50.7L239.3 150.7A16 16 0 0 1 237 175.2Q128 249.3 19 175.2A16 16 0 0 1 16.7 150.7ZM128 84.6L203 159.6Q128 210.7 53 159.6Z" />
+            <path fill="var(--brand-pupil)" d="M98 147a30 30 0 1 0 60 0a30 30 0 1 0 -60 0Z" />
+          </g>
         </svg>
         <span className={styles.word}>Pantau</span>
       </a>

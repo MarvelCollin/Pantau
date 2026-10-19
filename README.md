@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="design/logo/final/pantau-lockup-reversed.svg" />
+    <img src="design/logo/final/pantau-lockup.svg" alt="Pantau" width="320" />
+  </picture>
+</p>
+
 # Pantau
 
 A live map of Indonesia built only from free public data. Flights, ships, satellites, earthquakes, volcano alert levels, fire hotspots, citizen flood reports, rain radar, local weather and public road cameras, all on one map.

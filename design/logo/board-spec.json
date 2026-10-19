@@ -1,0 +1,31 @@
+{
+  "brand": "Pantau",
+  "tagline": "Live open data across Indonesia",
+  "brief": "A free live map of Indonesia showing flights, ships, satellites, earthquakes, volcano alert levels, fires, floods, rain radar and cameras. The name means to watch over. It should feel watchful, calm and trustworthy, and rooted in Indonesia.",
+  "adjectives": ["watchful", "calm", "trustworthy", "Indonesian"],
+  "criteria": "Success: avoids the crosshair, radar and globe clichés, reads at 16 px, works in one colour and reversed, feels calm rather than alarming.",
+  "industry": "consumer-app",
+  "nav": ["Layers", "Sources", "GitHub"],
+  "brand_color": "#1f4d55",
+  "greyscale": false,
+  "designer": "Pantau",
+  "round": 2,
+  "concepts": [
+    {
+      "name": "Volcano Eye",
+      "symbol": "final/pantau-symbol.svg",
+      "lockup": "final/pantau-lockup.svg",
+      "symbol_on_tile": "final/pantau-symbol-small-reversed.svg",
+      "lockup_on_dark": "final/pantau-lockup-reversed.svg",
+      "tile_color": "#1f4d55",
+      "idea": "An eye whose upper lid is a volcano peak, watching over the land.",
+      "rationale": [
+        "Pantau means to watch over, and the volcano roots it in Indonesia",
+        "One continuous outline with a lava coloured pupil, readable at 16 px with the small cut",
+        "Teal for calm and trust, lava apricot for the single point of attention"
+      ]
+    }
+  ],
+  "recommendation": "Volcano Eye, chosen by the client. Use the small cut below 48 px and keep the pupil in lava apricot on light backgrounds.",
+  "next_steps": ["Use the files in design/logo/final", "Follow the usage guide in design/logo/README.md"]
+}
