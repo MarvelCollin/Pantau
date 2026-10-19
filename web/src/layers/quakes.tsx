@@ -1,10 +1,11 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import type { FeatureCollection } from 'geojson'
 import { getEnvelope } from '../lib/api'
 import { formatAgo, formatCoord, formatWib } from '../lib/format'
 import { useLayerOn } from '../state/store'
 import { useMapLayer } from '../map/useMapLayer'
+import { mapHooks, useMap } from '../map/context'
 import { usePalette } from '../map/usePalette'
 import { useLayerStatus } from './useLayerStatus'
 import { DetailHeader, ExternalLink, Facts, Gone, Lead, Section } from '../ui/Detail'
@@ -103,6 +104,14 @@ function QuakesLayer() {
     visible: on,
     interactive: ['quakes-circle'],
   })
+
+  const map = useMap()
+  useEffect(() => {
+    if (!map) return
+    const fresh = on && items ? items.filter((q) => Date.now() - q.time < 3 * 3600_000 && q.mag >= 3).map((q) => [q.lon, q.lat] as [number, number]) : []
+    mapHooks.pulses('quake', fresh)
+    return () => mapHooks.pulses('quake', [])
+  }, [map, on, items])
 
   useLayerStatus('quakes', on, query, { count: items?.length, note: 'recent', staleAfterMs: 5 * 60_000 })
   return null

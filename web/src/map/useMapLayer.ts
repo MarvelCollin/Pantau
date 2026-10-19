@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useStore } from '../state/store'
 import type { GeoJSONSource, LayerSpecification, SourceSpecification } from 'maplibre-gl'
 import type { FeatureCollection } from 'geojson'
-import { useMap, interactiveLayers, firstLabelLayer } from './context'
+import { useMap, interactiveLayers, firstLabelLayer, mapHooks } from './context'
 import type { LayerId } from '../layers/registry'
 
 type DataLayer = Exclude<LayerSpecification, { type: 'background' }>
@@ -19,6 +19,22 @@ interface Options {
   belowLabels?: boolean
 }
 
+const HOVER = ['boolean', ['feature-state', 'hover'], false]
+
+function withHover<T extends LayerSpec>(layer: T, interactive: string[]): T {
+  if (!interactive.includes(layer.id) || !('paint' in layer)) return layer
+  const paint = { ...(layer.paint as Record<string, unknown>) }
+  if (layer.type === 'symbol') {
+    paint['icon-halo-width'] = ['case', HOVER, 3, paint['icon-halo-width'] ?? 1.5]
+    paint['icon-halo-color'] = ['case', HOVER, getComputedStyle(document.documentElement).getPropertyValue('--ink').trim(), paint['icon-halo-color'] ?? '#fff']
+  }
+  if (layer.type === 'circle') {
+    const base = paint['circle-stroke-width'] ?? 1
+    paint['circle-stroke-width'] = ['case', HOVER, 3.5, base]
+  }
+  return { ...layer, paint } as T
+}
+
 export const emptyCollection: FeatureCollection = { type: 'FeatureCollection', features: [] }
 
 export function useMapLayer({ owner, sourceId, source, layers, data, visible, interactive = [], belowLabels }: Options) {
@@ -29,11 +45,12 @@ export function useMapLayer({ owner, sourceId, source, layers, data, visible, in
 
   useEffect(() => {
     if (!map) return
-    if (!map.getSource(sourceId)) map.addSource(sourceId, sourceRef.current)
+    const spec = sourceRef.current
+    if (!map.getSource(sourceId)) map.addSource(sourceId, spec.type === 'geojson' ? { ...spec, promoteId: 'id' } : spec)
     const before = belowLabels ? firstLabelLayer(map) : undefined
     for (const layer of layersRef.current) {
       if (map.getLayer(layer.id)) continue
-      map.addLayer({ ...layer, source: sourceId, metadata: { pantau: owner } } as LayerSpecification, before)
+      map.addLayer({ ...withHover(layer, interactive), source: sourceId, metadata: { pantau: owner } } as LayerSpecification, before)
     }
     if (map.getLayer('selection-ring')) map.moveLayer('selection-ring')
     for (const id of interactive) interactiveLayers.set(id, owner)
@@ -57,6 +74,7 @@ export function useMapLayer({ owner, sourceId, source, layers, data, visible, in
     const feature = data.features.find((f) => String(f.properties?.id) === selectedId)
     const ring = map.getSource('selection') as GeoJSONSource | undefined
     ring?.setData({ type: 'FeatureCollection', features: feature ? [{ ...feature, properties: {} }] : [] })
+    mapHooks.selection(feature && feature.geometry.type === 'Point' ? (feature.geometry.coordinates as [number, number]) : null)
   }, [map, selectedId, data])
 
   useEffect(() => {
@@ -70,7 +88,7 @@ export function useMapLayer({ owner, sourceId, source, layers, data, visible, in
     if (!map) return
     for (const layer of layers) {
       if (!map.getLayer(layer.id) || !('paint' in layer) || !layer.paint) continue
-      for (const [key, value] of Object.entries(layer.paint)) {
+      for (const [key, value] of Object.entries(withHover(layer, interactive).paint ?? {})) {
         map.setPaintProperty(layer.id, key as never, value as never)
       }
     }

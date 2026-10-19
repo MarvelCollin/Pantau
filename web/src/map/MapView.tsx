@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Map as MapLibre, setWorkerUrl, type GeoJSONSource, type MapMouseEvent } from 'maplibre-gl'
+import { Map as MapLibre, Marker, setWorkerUrl, type GeoJSONSource, type MapGeoJSONFeature, type MapMouseEvent } from 'maplibre-gl'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
 import 'maplibre-gl/dist/maplibre-gl.css'
-import { MapContext, interactiveLayers } from './context'
+import { MapContext, interactiveLayers, mapHooks } from './context'
 import { applyBasemap, buildStyle } from './basemap'
 import { registerIcons } from './icons'
 import { useStore } from '../state/store'
@@ -51,6 +51,50 @@ function revealUnderPanel(map: MapLibre, e: MapMouseEvent) {
   if (!covered) return
   const target = sheet ? { x: width / 2, y: height * 0.18 } : { x: (width - 400) / 2, y: height / 2 }
   map.panBy([e.point.x - target.x, e.point.y - target.y], { duration: matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 400 })
+}
+
+function motionElement(className: string): HTMLElement {
+  const holder = document.createElement('div')
+  holder.className = 'map-motion'
+  const inner = document.createElement('div')
+  inner.className = className
+  holder.appendChild(inner)
+  return holder
+}
+
+function installMotion(map: MapLibre) {
+  let ring: Marker | null = null
+  mapHooks.selection = (coords) => {
+    if (!coords) {
+      ring?.remove()
+      ring = null
+      return
+    }
+    if (!ring) {
+      ring = new Marker({ element: motionElement('map-pulse') }).setLngLat(coords).addTo(map)
+    } else ring.setLngLat(coords)
+  }
+  const groups = new Map<string, Marker[]>()
+  mapHooks.pulses = (group, points) => {
+    for (const m of groups.get(group) ?? []) m.remove()
+    groups.set(
+      group,
+      points.map((p) => {
+        return new Marker({ element: motionElement(`map-ripple map-ripple-${group}`) }).setLngLat(p).addTo(map)
+      }),
+    )
+  }
+}
+
+let hovered: { source: string; id: string | number } | null = null
+
+function setHover(map: MapLibre, feature: MapGeoJSONFeature | undefined) {
+  const next = feature && feature.id !== undefined ? { source: feature.source, id: feature.id } : null
+  if (hovered && (!next || hovered.source !== next.source || hovered.id !== next.id)) {
+    if (map.getSource(hovered.source)) map.setFeatureState(hovered, { hover: false })
+  }
+  if (next) map.setFeatureState(next, { hover: true })
+  hovered = next
 }
 
 function addSelectionLayer(map: MapLibre) {
@@ -110,6 +154,7 @@ export function MapView({ children }: { children: ReactNode }) {
     instance.once('load', () => {
       registerIcons(instance)
       addSelectionLayer(instance)
+      installMotion(instance)
       publishView()
       setMap(instance)
     })
@@ -119,11 +164,15 @@ export function MapView({ children }: { children: ReactNode }) {
     instance.on('mousemove', (e: MapMouseEvent) => {
       const feature = hitFeature(instance, e)
       instance.getCanvas().style.cursor = feature ? 'pointer' : ''
+      setHover(instance, feature)
       const title = feature?.properties?.title
       setTooltip(feature && title ? { x: e.point.x, y: e.point.y, text: String(title) } : null)
     })
 
-    instance.on('mouseout', () => setTooltip(null))
+    instance.on('mouseout', () => {
+      setTooltip(null)
+      setHover(instance, undefined)
+    })
 
     instance.on('click', (e: MapMouseEvent) => {
       const feature = hitFeature(instance, e)
@@ -169,6 +218,7 @@ export function MapView({ children }: { children: ReactNode }) {
           ? [{ type: 'Feature', geometry: { type: 'Point', coordinates: [selection.lon, selection.lat] }, properties: {} }]
           : [],
     })
+    mapHooks.selection(selection?.kind === 'point' ? [selection.lon, selection.lat] : null)
   }, [map, selection])
 
   useEffect(() => {

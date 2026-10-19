@@ -220,3 +220,55 @@ a {
 .skip-link:focus-visible {
   transform: none;
 }
+
+.map-motion {
+  pointer-events: none;
+}
+
+.map-pulse {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid var(--ink);
+  pointer-events: none;
+  animation: map-pulse 1.8s var(--ease-out) infinite;
+}
+
+.map-ripple {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid var(--c-quakes);
+  pointer-events: none;
+  animation: map-ripple 2.2s var(--ease-out) infinite;
+}
+
+@keyframes map-pulse {
+  from {
+    transform: scale(0.6);
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+@keyframes map-ripple {
+  from {
+    transform: scale(0.3);
+    opacity: 1;
+  }
+  to {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-pulse,
+  .map-ripple {
+    animation: none;
+    opacity: 0;
+  }
+}

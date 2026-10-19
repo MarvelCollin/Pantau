@@ -3,12 +3,23 @@ import { useStore } from '../state/store'
 import { formatClock } from '../lib/format'
 import { useNow } from '../lib/useNow'
 import styles from './TopBar.module.css'
-import type { ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 
 export function TopBar({ children }: { children?: ReactNode }) {
   const theme = useStore((s) => s.theme)
   const setTheme = useStore((s) => s.setTheme)
   const now = useNow(15_000)
+  const [online, setOnline] = useState(() => navigator.onLine)
+  useEffect(() => {
+    const up = () => setOnline(true)
+    const down = () => setOnline(false)
+    window.addEventListener('online', up)
+    window.addEventListener('offline', down)
+    return () => {
+      window.removeEventListener('online', up)
+      window.removeEventListener('offline', down)
+    }
+  }, [])
   const next = theme === 'dark' ? 'light' : 'dark'
 
   return (
@@ -25,6 +36,10 @@ export function TopBar({ children }: { children?: ReactNode }) {
       <p className={styles.tagline}>Live open data across Indonesia</p>
       <div className={styles.center}>{children}</div>
       <div className={styles.actions}>
+        <span className={styles.live} data-online={online} role="status">
+          <span className={styles.liveDot} aria-hidden="true" />
+          {online ? 'Live' : 'Offline, showing saved data'}
+        </span>
         <time className={`num ${styles.clock}`} dateTime={new Date(now).toISOString()}>
           {formatClock(now)} WIB
         </time>

@@ -37,7 +37,11 @@
   border-radius: var(--radius-sm);
   background: transparent;
   text-align: left;
-  transition: background-color var(--dur-fast) var(--ease-out);
+  transition: background-color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+
+.row:active {
+  transform: scale(0.985);
 }
 
 .row:hover {
@@ -55,8 +59,16 @@
   width: 20px;
 }
 
+.glyph {
+  transition: opacity var(--dur-med) var(--ease-out), transform var(--dur-med) var(--ease-out);
+}
+
 .row[data-on='false'] .glyph {
   opacity: 0.55;
+}
+
+.row[data-on='true'] .glyph {
+  transform: scale(1.08);
 }
 
 .text {

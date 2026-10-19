@@ -53,6 +53,15 @@
   border-radius: var(--radius-sm);
   box-shadow: var(--elev-2);
   overflow: hidden;
+  transform-origin: top center;
+  animation: drop-in var(--dur-fast) var(--ease-out);
+}
+
+@keyframes drop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
 }
 
 .scopes {
@@ -133,6 +142,10 @@
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-xs);
   cursor: pointer;
+}
+
+.option {
+  transition: background-color var(--dur-fast) var(--ease-out);
 }
 
 .option[aria-selected='true'] {

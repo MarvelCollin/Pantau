@@ -13,3 +13,13 @@ export const interactiveLayers = new Map<string, LayerId>()
 export function firstLabelLayer(map: MapLibre): string | undefined {
   return map.getStyle().layers.find((l) => l.type === 'symbol')?.id
 }
+
+type Point = [number, number]
+
+export const mapHooks: {
+  selection: (coords: Point | null) => void
+  pulses: (group: string, points: Point[]) => void
+} = {
+  selection: () => undefined,
+  pulses: () => undefined,
+}
