@@ -6,6 +6,7 @@ import { volcanoesModule } from './volcanoes'
 import { firesModule } from './fires'
 import { reportsModule } from './reports'
 import { karhutlaModule } from './karhutla'
+import { fireCrewsModule } from './firecrews'
 import { camerasModule } from './cameras'
 import { satellitesModule } from './satellites'
 import { weatherModule } from './weather'
@@ -24,6 +25,7 @@ export const layerModules: Partial<Record<LayerId, LayerModule>> = {
   volcanoes: volcanoesModule,
   fires: firesModule,
   karhutla: karhutlaModule,
+  firecrews: fireCrewsModule,
   reports: reportsModule,
   weather: weatherModule,
   cameras: camerasModule,
