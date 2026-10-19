@@ -16,7 +16,7 @@ export type WorkerIn =
 
 export type WorkerOut =
   | { type: 'positions'; time: number; items: SatPosition[] }
-  | { type: 'track'; id: string; lines: [number, number][][] }
+  | { type: 'track'; id: string; past: [number, number][][]; future: [number, number][][] }
 
 const sats: { id: string; name: string; rec: SatRec }[] = []
 
@@ -61,15 +61,18 @@ ctx.onmessage = (e) => {
   if (msg.type === 'track') {
     const sat = sats.find((s) => s.id === msg.id)
     if (!sat) return
-    const lines: [number, number][][] = [[]]
-    let prevLon: number | null = null
-    for (let m = -10; m <= 100; m += 1) {
-      const p = position(sat.rec, new Date(msg.time + m * 60_000))
-      if (!p) continue
-      if (prevLon !== null && Math.abs(p.lon - prevLon) > 180) lines.push([])
-      lines[lines.length - 1].push([p.lon, p.lat])
-      prevLon = p.lon
+    const path = (from: number, to: number) => {
+      const lines: [number, number][][] = [[]]
+      let prevLon: number | null = null
+      for (let m = from; m <= to; m += 1) {
+        const p = position(sat.rec, new Date(msg.time + m * 60_000))
+        if (!p) continue
+        if (prevLon !== null && Math.abs(p.lon - prevLon) > 180) lines.push([])
+        lines[lines.length - 1].push([p.lon, p.lat])
+        prevLon = p.lon
+      }
+      return lines.filter((l) => l.length > 1)
     }
-    ctx.postMessage({ type: 'track', id: msg.id, lines: lines.filter((l) => l.length > 1) })
+    ctx.postMessage({ type: 'track', id: msg.id, past: path(-45, 0), future: path(0, 100) })
   }
 }

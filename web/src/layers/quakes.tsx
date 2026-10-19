@@ -9,6 +9,8 @@ import { usePalette } from '../map/usePalette'
 import { useLayerStatus } from './useLayerStatus'
 import { DetailHeader, ExternalLink, Facts, Gone, Lead, Section } from '../ui/Detail'
 import styles from './quakes.module.css'
+import { Nearby } from '../ui/Nearby'
+import { distanceKm } from './trails'
 
 export interface Quake {
   id: string
@@ -30,8 +32,8 @@ export function useQuakes(enabled = true) {
     queryKey: ['quakes'],
     queryFn: ({ signal }) => getEnvelope<Quake[]>('/api/quakes', signal),
     enabled,
-    staleTime: 60_000,
-    refetchInterval: 60_000,
+    staleTime: 2 * 60_000,
+    refetchInterval: 2 * 60_000,
     meta: { persist: true },
   })
 }
@@ -131,6 +133,21 @@ function QuakeDetail({ id }: { id: string }) {
           <img className={styles.shakemap} src={q.shakemap} alt={`BMKG shake intensity map for the earthquake near ${q.place}`} width={640} height={640} loading="lazy" />
         </Section>
       )}
+      <Nearby
+        title="Other earthquakes within 150 km this week"
+        layer="quakes"
+        empty="No other earthquakes recorded nearby this week."
+        items={(data?.items ?? [])
+          .filter((o) => o.id !== q.id && distanceKm([o.lon, o.lat], [q.lon, q.lat]) <= 150)
+          .slice(0, 8)
+          .map((o) => ({
+            id: o.id,
+            lon: o.lon,
+            lat: o.lat,
+            label: `M${o.mag.toFixed(1)}, ${Math.round(distanceKm([o.lon, o.lat], [q.lon, q.lat]))} km away`,
+            sub: formatAgo(o.time),
+          }))}
+      />
       <Section>
         {q.url ? (
           <ExternalLink href={q.url}>Event page on USGS</ExternalLink>

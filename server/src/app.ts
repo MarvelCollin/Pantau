@@ -1,9 +1,11 @@
 import { Hono } from 'hono'
 import { etag } from 'hono/etag'
+import { cors } from 'hono/cors'
 import { registerRoutes } from './routes.js'
 
 const api = new Hono()
 
+api.use('*', cors({ origin: '*', allowMethods: ['GET'], maxAge: 86400 }))
 api.use('*', etag())
 
 api.get('/health', (c) => {

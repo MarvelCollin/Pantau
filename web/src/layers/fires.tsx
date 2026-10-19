@@ -7,6 +7,8 @@ import { usePalette } from '../map/usePalette'
 import { useLayerStatus } from './useLayerStatus'
 import { useEnvelope } from './useStaticLayer'
 import { DetailHeader, ExternalLink, Facts, Gone, Lead, Section } from '../ui/Detail'
+import { distanceKm } from './trails'
+import { cities } from '../map/overview'
 
 export type Fire = [lat: number, lon: number, frp: number, confidence: 'l' | 'n' | 'h', time: number, night: 0 | 1]
 
@@ -76,6 +78,11 @@ function FireDetail({ id }: { id: string }) {
   const f = data?.items.find((i) => fireId(i) === id)
   if (!f) return <Gone layer="fires" />
   const time = f[4] * 1000
+  const here: [number, number] = [f[1], f[0]]
+  const cluster = data!.items.filter((o) => Math.abs(o[0] - f[0]) < 0.1 && Math.abs(o[1] - f[1]) < 0.1 && distanceKm([o[1], o[0]], here) <= 10)
+  const nearest = cities
+    .map(([name, region, lon, lat]) => ({ name, region, km: distanceKm([lon, lat], here) }))
+    .sort((a, b) => a.km - b.km)[0]
 
   return (
     <>
@@ -83,6 +90,8 @@ function FireDetail({ id }: { id: string }) {
       <Lead value={f[2]} unit="MW" label="Fire radiative power, a rough measure of how intense the fire is" />
       <Facts
         rows={[
+          ['Hotspots within 10 km', `${cluster.length} in the last 24 hours, ${Math.round(cluster.reduce((s, o) => s + o[2], 0))} MW in total`],
+          ['Nearest big city', `${nearest.name}, ${Math.round(nearest.km)} km away`],
           ['Confidence', confidence[f[3]]],
           ['Pass', f[5] ? 'Night' : 'Day'],
           ['Satellite', 'Suomi NPP, VIIRS'],

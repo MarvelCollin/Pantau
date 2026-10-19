@@ -2,6 +2,11 @@ node_modules
 dist
 .cache
 .env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
 *.log
 .DS_Store
 

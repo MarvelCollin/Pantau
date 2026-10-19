@@ -6,6 +6,9 @@ import { useMapLayer } from '../map/useMapLayer'
 import { usePalette } from '../map/usePalette'
 import { cssVar } from '../theme'
 import { useLayerStatus } from './useLayerStatus'
+import { getEnvelope } from '../lib/api'
+import { useQuery } from '@tanstack/react-query'
+import styles from './volcanoes.module.css'
 import { useEnvelope } from './useStaticLayer'
 import { DetailHeader, ExternalLink, Facts, Gone, Lead, Section } from '../ui/Detail'
 
@@ -31,7 +34,7 @@ export const levelNames: Record<Volcano['level'], { id: string; en: string; roma
 }
 
 export function useVolcanoes(enabled = true) {
-  return useEnvelope<Volcano[]>({ key: 'volcanoes', path: '/api/volcanoes', enabled, staleMs: 15 * 60_000, pollMs: 15 * 60_000 })
+  return useEnvelope<Volcano[]>({ key: 'volcanoes', path: '/api/volcanoes', enabled, staleMs: 30 * 60_000, pollMs: 30 * 60_000 })
 }
 
 function VolcanoesLayer() {
@@ -108,6 +111,77 @@ function VolcanoesLayer() {
   return null
 }
 
+interface VolcanoReport {
+  period: string
+  author?: string
+  visual?: string
+  photo?: string
+  weather?: string
+  seismic: string[]
+  seismicChart?: string
+  advice?: string
+}
+
+function Report({ code, name }: { code: string; name: string }) {
+  const { data, isPending, isError } = useQuery({
+    queryKey: ['volcano-report', code],
+    queryFn: ({ signal }) => getEnvelope<VolcanoReport>(`/api/volcanoes/report?code=${code}`, signal),
+    staleTime: 30 * 60_000,
+    meta: { persist: true },
+  })
+  if (isPending)
+    return (
+      <Section>
+        <span className="skeleton" style={{ width: '100%', aspectRatio: '4 / 3' }} aria-label="Loading the latest report" />
+      </Section>
+    )
+  if (isError || !data) return null
+  const r = data.items
+  return (
+    <Section>
+      <h3 className={styles.heading}>Latest observation report</h3>
+      <p className={styles.meta}>
+        {r.period}
+        {r.author ? `, by ${r.author}` : ''}. Written in Indonesian by MAGMA.
+      </p>
+      {r.photo && <img className={styles.photo} src={r.photo} alt={`Observation photo of ${name} from the MAGMA report`} width={640} height={480} loading="lazy" />}
+      {r.visual && (
+        <div>
+          <h4 className={styles.sub}>Visual</h4>
+          <p lang="id">{r.visual}</p>
+        </div>
+      )}
+      {r.seismic.length > 0 && (
+        <div>
+          <h4 className={styles.sub}>Seismic activity</h4>
+          <ul className={styles.list} lang="id">
+            {r.seismic.map((s) => (
+              <li key={s}>{s}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {r.weather && (
+        <div>
+          <h4 className={styles.sub}>Weather at the post</h4>
+          <p lang="id">{r.weather}</p>
+        </div>
+      )}
+      {r.advice && (
+        <div>
+          <h4 className={styles.sub}>Advice from MAGMA</h4>
+          <p className={styles.advice} lang="id">
+            {r.advice}
+          </p>
+        </div>
+      )}
+      {r.seismicChart && (
+        <img className={styles.chart} src={r.seismicChart} alt={`Daily earthquake count chart for ${name} from MAGMA`} loading="lazy" />
+      )}
+    </Section>
+  )
+}
+
 function VolcanoDetail({ id }: { id: string }) {
   const { data } = useVolcanoes()
   const v = data?.items.find((i) => i.code === id)
@@ -127,6 +201,7 @@ function VolcanoDetail({ id }: { id: string }) {
           ['Code', v.code],
         ]}
       />
+      <Report code={v.code} name={v.name} />
       <Section>
         <ExternalLink href={`https://magma.esdm.go.id/v1/gunung-api/cctv/${v.code}`}>Volcano cameras on MAGMA</ExternalLink>
         <ExternalLink href="https://magma.esdm.go.id/v1/gunung-api/tingkat-aktivitas">All alert levels on MAGMA</ExternalLink>

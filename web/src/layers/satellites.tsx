@@ -41,7 +41,7 @@ function useElements(enabled: boolean) {
 
 let latest: SatPosition[] = []
 const listeners = new Set<() => void>()
-let track: { id: string; lines: [number, number][][] } | null = null
+let track: { id: string; past: [number, number][][]; future: [number, number][][] } | null = null
 
 function useSatPositions() {
   const [, force] = useState(0)
@@ -70,7 +70,7 @@ function SatellitesLayer() {
     worker.current = w
     w.onmessage = (e: MessageEvent<WorkerOut>) => {
       if (e.data.type === 'positions') latest = e.data.items
-      else track = { id: e.data.id, lines: e.data.lines }
+      else track = { id: e.data.id, past: e.data.past, future: e.data.future }
       listeners.forEach((fn) => fn())
     }
     return () => {
@@ -110,11 +110,8 @@ function SatellitesLayer() {
       properties: { id: p.id, kind: 'sat', label: p.name, title: `${p.name}, ${formatNumber(Math.round(p.altKm))} km up` },
     }))
     if (track && track.id === selected) {
-      features.push({
-        type: 'Feature',
-        geometry: { type: 'MultiLineString', coordinates: track.lines },
-        properties: { kind: 'track' },
-      })
+      features.push({ type: 'Feature', geometry: { type: 'MultiLineString', coordinates: track.future }, properties: { kind: 'track' } })
+      features.push({ type: 'Feature', geometry: { type: 'MultiLineString', coordinates: track.past }, properties: { kind: 'past' } })
     }
     return { type: 'FeatureCollection', features }
   }, [positions, selected])
@@ -126,6 +123,13 @@ function SatellitesLayer() {
         type: 'line' as const,
         filter: ['==', ['get', 'kind'], 'track'],
         paint: { 'line-color': color, 'line-width': 1.5, 'line-dasharray': [2, 2], 'line-opacity': 0.8 },
+      },
+      {
+        id: 'satellites-past',
+        type: 'line' as const,
+        filter: ['==', ['get', 'kind'], 'past'],
+        layout: { 'line-cap': 'round' },
+        paint: { 'line-color': color, 'line-width': 2.5, 'line-opacity': 0.85 },
       },
       {
         id: 'satellites-icon',
@@ -180,8 +184,27 @@ function SatellitesLayer() {
   return null
 }
 
+const EARTH_KM = 6371
+const MU = 398600.4418
+
+function orbit(o: OMMJsonObject) {
+  const n = (Number(o.MEAN_MOTION) * 2 * Math.PI) / 86400
+  const a = Math.cbrt(MU / (n * n))
+  const e = Number(o.ECCENTRICITY)
+  return {
+    periodMin: 1440 / Number(o.MEAN_MOTION),
+    perigee: a * (1 - e) - EARTH_KM,
+    apogee: a * (1 + e) - EARTH_KM,
+    inclination: Number(o.INCLINATION),
+    launched: o.OBJECT_ID?.slice(0, 4),
+    epoch: o.EPOCH,
+  }
+}
+
 function SatelliteDetail({ id }: { id: string }) {
   const positions = useSatPositions()
+  const elements = useElements(true).data?.items.find((o) => String(o.NORAD_CAT_ID) === id)
+  const info = elements ? orbit(elements) : undefined
   const p = positions.find((s) => s.id === id)
   if (!p) return positions.length ? <Gone layer="satellites" /> : <DetailHeader layer="satellites" title="Working out position" />
 
@@ -193,7 +216,11 @@ function SatelliteDetail({ id }: { id: string }) {
         rows={[
           ['Speed', <span className="num">{p.speedKms.toFixed(2)} km/s, {formatNumber(Math.round(p.speedKms * 3600))} km/h</span>],
           ['Above', <span className="num">{formatCoord(p.lat, p.lon)}</span>],
-          ['Path', 'Dashed line shows the next 100 minutes'],
+          ['Orbit time', info ? <span className="num">{Math.round(info.periodMin)} min, {(1440 / info.periodMin).toFixed(1)} laps a day</span> : undefined],
+          ['Height range', info ? <span className="num">{formatNumber(Math.round(info.perigee))} to {formatNumber(Math.round(info.apogee))} km</span> : undefined],
+          ['Inclination', info ? <span className="num">{info.inclination.toFixed(1)}°</span> : undefined],
+          ['Launched', info?.launched],
+          ['Path', 'Solid line is the last 45 minutes, dashed is the next 100'],
         ]}
       />
       <Section>

@@ -34,7 +34,7 @@ const typeNames: Record<string, string> = {
 const typeIcons: Record<string, string> = { flood: 'drop', haze: 'drop', fire: 'diamond', volcano: 'triangle', earthquake: 'diamond', wind: 'diamond' }
 
 export function useReports(enabled = true) {
-  return useEnvelope<Report[]>({ key: 'reports', path: '/api/reports', enabled, staleMs: 2 * 60_000, pollMs: 3 * 60_000 })
+  return useEnvelope<Report[]>({ key: 'reports', path: '/api/reports', enabled, staleMs: 5 * 60_000, pollMs: 5 * 60_000 })
 }
 
 function ReportsLayer() {

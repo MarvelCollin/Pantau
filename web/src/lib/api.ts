@@ -14,7 +14,8 @@ export class ApiError extends Error {
   }
 }
 
-const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, '')
+const API_ORIGIN = import.meta.env.VITE_API_ORIGIN ?? (import.meta.env.PROD ? 'https://pantau-plum.vercel.app' : '')
+const API_BASE = API_ORIGIN + import.meta.env.BASE_URL.replace(/\/$/, '')
 
 export async function getJson<T>(url: string, signal?: AbortSignal): Promise<T> {
   const target = url.startsWith('/api/') ? API_BASE + url : url

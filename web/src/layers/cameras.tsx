@@ -8,6 +8,8 @@ import { useLayerStatus } from './useLayerStatus'
 import { useEnvelope } from './useStaticLayer'
 import { DetailHeader, ExternalLink, Facts, Gone, Section } from '../ui/Detail'
 import { CameraPlayer } from '../ui/CameraPlayer'
+import { Nearby } from '../ui/Nearby'
+import { distanceKm } from './trails'
 
 export interface Camera {
   id: string
@@ -23,7 +25,7 @@ export interface Camera {
 }
 
 export function useCameras(enabled = true) {
-  return useEnvelope<Camera[]>({ key: 'cameras', path: '/api/cameras', enabled, staleMs: 60_000, pollMs: 60_000 })
+  return useEnvelope<Camera[]>({ key: 'cameras', path: '/api/cameras', enabled, staleMs: 4 * 60_000, pollMs: 5 * 60_000 })
 }
 
 function CamerasLayer() {
@@ -93,6 +95,16 @@ function CameraDetail({ id }: { id: string }) {
           ['Operator', c.source === 'Bina Marga' ? 'Ministry of Public Works, Bina Marga' : 'Land Transport Authority, Singapore'],
           ['Location', <span className="num">{formatCoord(c.lat, c.lon)}</span>],
         ]}
+      />
+      <Nearby
+        title="Nearby cameras"
+        layer="cameras"
+        items={(data?.items ?? [])
+          .filter((o) => o.id !== c.id)
+          .map((o) => ({ o, km: distanceKm([o.lon, o.lat], [c.lon, c.lat]) }))
+          .sort((a, b) => a.km - b.km)
+          .slice(0, 4)
+          .map(({ o, km }) => ({ id: o.id, lon: o.lon, lat: o.lat, label: o.name, sub: `${km < 10 ? km.toFixed(1) : Math.round(km)} km` }))}
       />
       {c.page && (
         <Section>

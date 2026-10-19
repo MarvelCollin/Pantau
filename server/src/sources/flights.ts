@@ -90,6 +90,55 @@ export function snapCell(value: number): number {
   return Math.round(value / CELL_DEG) * CELL_DEG
 }
 
+const OVERVIEW_POINTS: [number, number][] = [
+  [-6.5, 107],
+  [-7.6, 112.4],
+  [-8.4, 116.2],
+  [-2.8, 104.6],
+  [1.2, 104],
+  [3.4, 98.6],
+  [-1.4, 116.6],
+  [-4.8, 120],
+  [1.2, 124.6],
+  [-3.4, 128.6],
+  [-2.6, 138.6],
+]
+
+export async function loadOverview(): Promise<Flight[]> {
+  const results = await Promise.allSettled(
+    OVERVIEW_POINTS.map(([lat, lon]) =>
+      cached(`flights:point:${lat}:${lon}`, { ttl: 40, swr: 80, sie: 300 }, () => loadFlights(lat, lon)).then((r) => r.entry.value),
+    ),
+  )
+  const ok = results.filter((r): r is PromiseFulfilledResult<Flight[]> => r.status === 'fulfilled')
+  if (ok.length === 0) throw (results[0] as PromiseRejectedResult).reason
+  const merged = new Map<string, Flight>()
+  for (const r of ok) for (const f of r.value) if (!merged.has(f.hex) || merged.get(f.hex)!.seen > f.seen) merged.set(f.hex, f)
+  return [...merged.values()]
+}
+
+export interface AircraftPhoto {
+  src: string
+  width: number
+  height: number
+  link: string
+  photographer: string
+}
+
+interface PlanespottersResponse {
+  photos?: { thumbnail_large?: { src: string; size: { width: number; height: number } }; link: string; photographer: string }[]
+}
+
+export async function loadPhoto(hex: string): Promise<AircraftPhoto | null> {
+  const res = await fetchJson<PlanespottersResponse>('Planespotters', `https://api.planespotters.net/pub/photos/hex/${hex}`, {
+    timeoutMs: 6000,
+    headers: { 'user-agent': 'pantau/1.0 (+https://marvelcollin.com/pantau/)' },
+  })
+  const p = res.photos?.[0]
+  if (!p?.thumbnail_large) return null
+  return { src: p.thumbnail_large.src, width: p.thumbnail_large.size.width, height: p.thumbnail_large.size.height, link: p.link, photographer: p.photographer }
+}
+
 export async function loadFlights(lat: number, lon: number): Promise<Flight[]> {
   const [res, mil] = await Promise.all([point(lat, lon), militaryHexes()])
   const list = res.ac ?? res.aircraft ?? []

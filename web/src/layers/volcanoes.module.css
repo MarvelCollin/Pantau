@@ -1,0 +1,38 @@
+.heading {
+  font-family: var(--font-body);
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+
+.sub {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.meta {
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.photo,
+.chart {
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.list {
+  margin: 0;
+  padding-left: 1.1em;
+  font-size: var(--text-sm);
+  display: grid;
+  gap: var(--space-1);
+}
+
+.advice {
+  white-space: pre-line;
+  font-size: var(--text-sm);
+}

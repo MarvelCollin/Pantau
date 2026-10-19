@@ -1,7 +1,8 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import type { FeatureCollection } from 'geojson'
 import { formatAgo, formatCoord } from '../lib/format'
-import { useLayerOn } from '../state/store'
+import { useLayerOn, useStore } from '../state/store'
+import { TrailBook, lineCoords } from './trails'
 import { useMapLayer } from '../map/useMapLayer'
 import { usePalette } from '../map/usePalette'
 import { useLayerStatus } from './useLayerStatus'
@@ -51,8 +52,10 @@ function typeName(code?: number): string | undefined {
   return 'Other'
 }
 
+const trails = new TrailBook()
+
 export function useShips(enabled = true) {
-  return useEnvelope<Ship[]>({ key: 'ships', path: '/api/ships', enabled, staleMs: 60_000, pollMs: 90_000, persist: false })
+  return useEnvelope<Ship[]>({ key: 'ships', path: '/api/ships', enabled, staleMs: 2 * 60_000, pollMs: 2 * 60_000, persist: false })
 }
 
 function ShipsLayer() {
@@ -61,29 +64,49 @@ function ShipsLayer() {
   const palette = usePalette()
   const color = palette.color('ships')
   const items = query.data?.items
+  const env = query.data
+  const selected = useStore((s) => (s.selection?.kind === 'item' && s.selection.layer === 'ships' ? s.selection.id : null))
+
+  useEffect(() => {
+    if (env) trails.record(env.fetchedAt, env.items.map((s) => ({ id: String(s.mmsi), lon: s.lon, lat: s.lat, t: s.time })))
+  }, [env])
 
   const data = useMemo<FeatureCollection | undefined>(
     () =>
       items && {
         type: 'FeatureCollection',
-        features: items.map((s) => ({
-          type: 'Feature',
-          geometry: { type: 'Point', coordinates: [s.lon, s.lat] },
+        features: [
+          ...(selected && trails.get(selected).length > 1
+            ? [{ type: 'Feature' as const, geometry: { type: 'LineString' as const, coordinates: lineCoords(trails.get(selected)) }, properties: { role: 'trail' } }]
+            : []),
+          ...items.map((s) => ({
+          type: 'Feature' as const,
+          geometry: { type: 'Point' as const, coordinates: [s.lon, s.lat] },
           properties: {
             id: String(s.mmsi),
             course: s.heading ?? s.cog ?? 0,
             moving: (s.sog ?? 0) > 0.5 ? 1 : 0,
+            role: 'ship',
             title: [s.name ?? `MMSI ${s.mmsi}`, typeName(s.shipType), s.sog !== undefined ? `${s.sog} kn` : ''].filter(Boolean).join(', '),
           },
         })),
+        ],
       },
-    [items],
+    [items, selected],
   )
 
   const specs = useMemo(
     () => [
       {
+        id: 'ships-trail',
+        type: 'line' as const,
+        filter: ['==', ['get', 'role'], 'trail'],
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: { 'line-color': color, 'line-width': 2.5, 'line-opacity': 0.8 },
+      },
+      {
         id: 'ships-icon',
+        filter: ['==', ['get', 'role'], 'ship'],
         type: 'symbol' as const,
         layout: {
           'icon-image': 'ship',
@@ -137,6 +160,7 @@ function ShipDetail({ id }: { id: string }) {
           ['MMSI', <span className="num">{s.mmsi}</span>],
           ['Position', <span className="num">{formatCoord(s.lat, s.lon)}</span>],
           ['Last report', formatAgo(s.time)],
+          ['Trail', trails.get(id).length > 1 ? `Line shows ${trails.get(id).length} positions seen by Pantau` : 'Trail builds up while you watch'],
         ]}
       />
       <Section>

@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useQueries, useQueryClient } from '@tanstack/react-query'
-import type { FeatureCollection } from 'geojson'
-import { getEnvelope, type Envelope } from '../lib/api'
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query'
+import type { Feature, FeatureCollection } from 'geojson'
+import { getEnvelope, getJson, type Envelope } from '../lib/api'
 import { formatCoord, formatNumber } from '../lib/format'
-import { useLayerOn, useStore, type ViewState } from '../state/store'
+import { useLayerOn, useStore } from '../state/store'
 import { useMapLayer } from '../map/useMapLayer'
 import { usePalette } from '../map/usePalette'
 import { cssVar } from '../theme'
 import { useLayerStatus } from './useLayerStatus'
+import { TrailBook, distanceKm, greatCircle, lineCoords } from './trails'
 import { DetailHeader, ExternalLink, Facts, Gone, Lead, Section } from '../ui/Detail'
+import styles from './flights.module.css'
 
 export interface Flight {
   hex: string
@@ -28,34 +30,59 @@ export interface Flight {
   seen: number
 }
 
+interface Airport {
+  iata_code?: string
+  icao_code: string
+  name: string
+  municipality?: string
+  country_name?: string
+  latitude: number
+  longitude: number
+}
+
+interface Route {
+  airline?: { name: string; iata?: string; icao?: string; country?: string }
+  origin: Airport
+  destination: Airport
+}
+
+interface Photo {
+  src: string
+  width: number
+  height: number
+  link: string
+  photographer: string
+}
+
+const AIRLINES: Record<string, string> = {
+  GIA: 'Garuda Indonesia',
+  CTV: 'Citilink',
+  LNI: 'Lion Air',
+  BTK: 'Batik Air',
+  WON: 'Wings Air',
+  SJV: 'Super Air Jet',
+  AWQ: 'Indonesia AirAsia',
+  SJY: 'Sriwijaya Air',
+  NAM: 'NAM Air',
+  PAS: 'Pelita Air',
+  TGN: 'Trigana Air',
+  TNU: 'TransNusa',
+  XAX: 'AirAsia X',
+  SIA: 'Singapore Airlines',
+  TGW: 'Scoot',
+  MAS: 'Malaysia Airlines',
+  AXM: 'AirAsia',
+  QFA: 'Qantas',
+  JST: 'Jetstar',
+}
+
 const CELL = 5
-const MAX_CELLS = 6
-const POLL_MS = 15_000
-
-function cellsFor(view: ViewState | null): { cells: [number, number][]; capped: boolean } {
-  if (!view) return { cells: [], capped: false }
-  const [w, s, e, n] = view.bounds
-  const snap = (v: number) => Math.round(v / CELL) * CELL
-  const cells: [number, number][] = []
-  for (let lat = snap(s); lat <= snap(n); lat += CELL) {
-    for (let lon = snap(w); lon <= snap(e); lon += CELL) {
-      if (lat < -85 || lat > 85) continue
-      const wrapped = ((((lon + 180) % 360) + 360) % 360) - 180
-      cells.push([lat, wrapped])
-    }
-  }
-  const [cx, cy] = view.center
-  cells.sort((a, b) => Math.hypot(a[0] - cy, a[1] - cx) - Math.hypot(b[0] - cy, b[1] - cx))
-  return { cells: cells.slice(0, MAX_CELLS), capped: cells.length > MAX_CELLS }
-}
-
-function flightKey(lat: number, lon: number) {
-  return ['flights', lat, lon] as const
-}
+const DETAIL_ZOOM = 6
+const trails = new TrailBook()
 
 function project(f: Flight, seconds: number): [number, number] {
   if (f.ground || !f.speedKt || f.track === undefined || seconds <= 0) return [f.lon, f.lat]
-  const t = Math.min(seconds, 60)
+  const t = Math.min(seconds, 90)
   const km = f.speedKt * 1.852 * (t / 3600)
   const rad = (f.track * Math.PI) / 180
   const dLat = (km * Math.cos(rad)) / 111.32
@@ -63,51 +90,72 @@ function project(f: Flight, seconds: number): [number, number] {
   return [f.lon + dLon, f.lat + dLat]
 }
 
-export function useFlightsData(on: boolean) {
+function useFlightsData(on: boolean) {
   const view = useStore((s) => s.view)
-  const { cells, capped } = useMemo(() => cellsFor(view), [view])
-  const queries = useQueries({
-    queries: cells.map(([lat, lon]) => ({
-      queryKey: flightKey(lat, lon),
-      queryFn: ({ signal }: { signal: AbortSignal }) => getEnvelope<Flight[]>(`/api/flights?lat=${lat}&lon=${lon}`, signal),
-      enabled: on,
-      staleTime: 10_000,
-      refetchInterval: POLL_MS,
-      gcTime: 2 * 60_000,
-    })),
+  const detailed = (view?.zoom ?? 0) >= DETAIL_ZOOM
+  const lat = view ? Math.round(view.center[1] / CELL) * CELL : 0
+  const lon = view ? ((((Math.round(view.center[0] / CELL) * CELL + 180) % 360) + 360) % 360) - 180 : 0
+  const query = useQuery({
+    queryKey: detailed ? ['flights', lat, lon] : ['flights', 'overview'],
+    queryFn: ({ signal }) => getEnvelope<Flight[]>(detailed ? `/api/flights?lat=${lat}&lon=${lon}` : '/api/flights/overview', signal),
+    enabled: on && view !== null,
+    staleTime: detailed ? 15_000 : 40_000,
+    refetchInterval: detailed ? 20_000 : 45_000,
+    gcTime: 5 * 60_000,
+    placeholderData: keepPreviousData,
   })
-  return { queries, capped }
+  const env = query.data
+  useEffect(() => {
+    if (!env) return
+    trails.record(
+      env.fetchedAt,
+      env.items.map((f) => ({ id: f.hex, lon: f.lon, lat: f.lat, t: env.fetchedAt - f.seen * 1000 })),
+    )
+  }, [env])
+  return { query, detailed }
 }
 
-interface Positioned {
-  flight: Flight
-  fetchedAt: number
+function useRoute(callsign?: string) {
+  return useQuery({
+    queryKey: ['route', callsign],
+    queryFn: async ({ signal }) => {
+      try {
+        const res = await getJson<{ response: { flightroute?: Route } | string }>(`https://api.adsbdb.com/v0/callsign/${encodeURIComponent(callsign!)}`, signal)
+        const route = typeof res.response === 'object' ? (res.response.flightroute ?? null) : null
+        const known = AIRLINES[callsign!.slice(0, 3)]
+        if (route && known && route.airline?.name !== known) route.airline = { ...route.airline, name: known, country: undefined }
+        return route
+      } catch {
+        return null
+      }
+    },
+    enabled: !!callsign && /^[A-Z]{3}\d/.test(callsign),
+    staleTime: 12 * 3600_000,
+    gcTime: 24 * 3600_000,
+    meta: { persist: true },
+  })
 }
 
-function merge(results: (Envelope<Flight[]> | undefined)[]): Map<string, Positioned> {
-  const map = new Map<string, Positioned>()
-  for (const env of results) {
-    if (!env) continue
-    for (const f of env.items) {
-      const prev = map.get(f.hex)
-      const at = env.fetchedAt - f.seen * 1000
-      if (!prev || prev.fetchedAt - prev.flight.seen * 1000 < at) map.set(f.hex, { flight: f, fetchedAt: env.fetchedAt })
-    }
-  }
-  return map
+function usePhoto(hex: string) {
+  return useQuery({
+    queryKey: ['photo', hex],
+    queryFn: ({ signal }) => getEnvelope<Photo | null>(`/api/flights/photo?hex=${hex}`, signal),
+    staleTime: 24 * 3600_000,
+    meta: { persist: true },
+  })
 }
 
 function FlightsLayer() {
   const on = useLayerOn('flights')
-  const { queries, capped } = useFlightsData(on)
+  const { query, detailed } = useFlightsData(on)
   const palette = usePalette()
   const color = palette.color('flights')
   const view = useStore((s) => s.view)
+  const selected = useStore((s) => (s.selection?.kind === 'item' && s.selection.layer === 'flights' ? s.selection.id : null))
   const [tick, setTick] = useState(() => Date.now())
-
-  const results = queries.map((q) => q.data)
-  const stamp = results.map((r) => r?.fetchedAt ?? 0).join(',')
-  const merged = useMemo(() => merge(results), [stamp])
+  const env = query.data
+  const selectedFlight = selected ? env?.items.find((f) => f.hex === selected) : undefined
+  const route = useRoute(selectedFlight?.callsign).data
 
   useEffect(() => {
     if (!on) return
@@ -118,30 +166,76 @@ function FlightsLayer() {
   }, [on])
 
   const data = useMemo<FeatureCollection>(() => {
-    const features: FeatureCollection['features'] = []
-    for (const { flight: f, fetchedAt } of merged.values()) {
-      const coords = project(f, (tick - fetchedAt) / 1000 + f.seen)
+    const features: Feature[] = []
+    if (!env) return { type: 'FeatureCollection', features }
+    for (const f of env.items) {
+      const coords = project(f, (tick - env.fetchedAt) / 1000 + f.seen)
       features.push({
         type: 'Feature',
         geometry: { type: 'Point', coordinates: coords },
         properties: {
           id: f.hex,
+          role: 'plane',
           track: f.track ?? 0,
           kind: f.emergency ? 'emergency' : f.military ? 'military' : f.ground ? 'ground' : 'air',
           label: f.callsign ?? f.reg ?? f.hex,
           title: [f.callsign ?? f.hex, f.type, f.altFt ? `${formatNumber(f.altFt)} ft` : f.ground ? 'on ground' : ''].filter(Boolean).join(', '),
         },
       })
+      if (f.hex === selected) {
+        const trail = lineCoords(trails.get(f.hex), coords)
+        if (trail.length > 1) features.push({ type: 'Feature', geometry: { type: 'LineString', coordinates: trail }, properties: { role: 'trail' } })
+      }
+    }
+    if (route) {
+      const from: [number, number] = [route.origin.longitude, route.origin.latitude]
+      const to: [number, number] = [route.destination.longitude, route.destination.latitude]
+      features.push({ type: 'Feature', geometry: { type: 'LineString', coordinates: greatCircle(from, to) }, properties: { role: 'route' } })
+      for (const [airport, at] of [
+        [route.origin, from],
+        [route.destination, to],
+      ] as const)
+        features.push({ type: 'Feature', geometry: { type: 'Point', coordinates: at }, properties: { role: 'airport', code: airport.iata_code ?? airport.icao_code } })
     }
     return { type: 'FeatureCollection', features }
-  }, [merged, tick])
+  }, [env, tick, selected, route])
 
   const military = cssVar('--accent-strong')
   const specs = useMemo(
     () => [
       {
+        id: 'flights-route',
+        type: 'line' as const,
+        filter: ['==', ['get', 'role'], 'route'],
+        paint: { 'line-color': color, 'line-width': 1.5, 'line-opacity': 0.55, 'line-dasharray': [1, 2.5] },
+      },
+      {
+        id: 'flights-trail',
+        type: 'line' as const,
+        filter: ['==', ['get', 'role'], 'trail'],
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: { 'line-color': color, 'line-width': 3, 'line-opacity': 0.85 },
+      },
+      {
+        id: 'flights-airport',
+        type: 'symbol' as const,
+        filter: ['==', ['get', 'role'], 'airport'],
+        layout: {
+          'icon-image': 'square',
+          'icon-size': 0.35,
+          'text-field': ['get', 'code'],
+          'text-font': ['Noto Sans Bold'],
+          'text-size': 11,
+          'text-offset': [0, 1.1],
+          'text-anchor': 'top',
+          'icon-allow-overlap': true,
+        },
+        paint: { 'icon-color': color, 'text-color': color, 'text-halo-color': palette.halo, 'text-halo-width': 1.5 },
+      },
+      {
         id: 'flights-icon',
         type: 'symbol' as const,
+        filter: ['==', ['get', 'role'], 'plane'],
         layout: {
           'icon-image': 'plane',
           'icon-size': ['interpolate', ['linear'], ['zoom'], 3, 0.42, 8, 0.62, 12, 0.8],
@@ -157,17 +251,7 @@ function FlightsLayer() {
           'text-optional': true,
         },
         paint: {
-          'icon-color': [
-            'match',
-            ['get', 'kind'],
-            'emergency',
-            palette.danger,
-            'military',
-            military,
-            'ground',
-            cssVar('--muted'),
-            color,
-          ],
+          'icon-color': ['match', ['get', 'kind'], 'emergency', palette.danger, 'military', military, 'ground', cssVar('--muted'), color],
           'icon-halo-color': palette.halo,
           'icon-halo-width': 1.5,
           'text-color': color,
@@ -190,55 +274,99 @@ function FlightsLayer() {
   })
 
   const inView = useMemo(() => {
-    if (!view) return merged.size
+    if (!env) return undefined
+    if (!view) return env.items.length
     const [w, s, e, n] = view.bounds
-    let count = 0
-    for (const { flight } of merged.values()) if (flight.lat >= s && flight.lat <= n && flight.lon >= w && flight.lon <= e) count++
-    return count
-  }, [merged, view])
+    return env.items.filter((f) => f.lat >= s && f.lat <= n && f.lon >= w && f.lon <= e).length
+  }, [env, view])
 
-  const lead = queries.find((q) => q.data) ?? queries[0]
-  const source = {
-    data: lead?.data,
-    isError: queries.length > 0 && queries.every((q) => q.isError),
-    error: lead?.error,
-  }
-  useLayerStatus('flights', on, source, {
+  useLayerStatus('flights', on, query, {
     count: inView,
-    note: 'in view',
-    staleAfterMs: 90_000,
-    override: capped && lead?.data ? 'zoom_in' : undefined,
+    note: detailed ? 'in view' : 'in view, zoom in for more',
+    staleAfterMs: 3 * 60_000,
   })
   return null
 }
 
-function useFlight(hex: string): Flight | undefined {
+function useFlight(hex: string): { flight?: Flight; fetchedAt?: number } {
   const client = useQueryClient()
   const [, force] = useState(0)
-  useEffect(() => {
-    const unsub = client.getQueryCache().subscribe(() => force((n) => n + 1))
-    return unsub
-  }, [client])
-  let best: Positioned | undefined
+  useEffect(
+    () =>
+      client.getQueryCache().subscribe((event) => {
+        if (event.type === 'updated' && event.action.type === 'success' && event.query.queryKey[0] === 'flights') force((n) => n + 1)
+      }),
+    [client],
+  )
+  let best: { flight: Flight; fetchedAt: number } | undefined
   for (const q of client.getQueryCache().findAll({ queryKey: ['flights'] })) {
     const env = q.state.data as Envelope<Flight[]> | undefined
     const f = env?.items.find((i) => i.hex === hex)
     if (f && env && (!best || env.fetchedAt > best.fetchedAt)) best = { flight: f, fetchedAt: env.fetchedAt }
   }
-  return best?.flight
+  return best ?? {}
+}
+
+function RouteBlock({ route, flight }: { route: Route; flight: Flight }) {
+  const from: [number, number] = [route.origin.longitude, route.origin.latitude]
+  const to: [number, number] = [route.destination.longitude, route.destination.latitude]
+  const total = distanceKm(from, to)
+  const left = distanceKm([flight.lon, flight.lat], to)
+  const progress = Math.max(0, Math.min(1, 1 - left / total))
+  const etaMin = flight.speedKt && !flight.ground ? Math.round((left / (flight.speedKt * 1.852)) * 60) : undefined
+  const place = (a: Airport) => a.municipality ?? a.name
+
+  return (
+    <div className={styles.route}>
+      <div className={styles.ends}>
+        <span>
+          <span className={styles.code}>{route.origin.iata_code ?? route.origin.icao_code}</span>
+          <span className={styles.city}>{place(route.origin)}</span>
+        </span>
+        <span className={styles.to}>
+          <span className={styles.code}>{route.destination.iata_code ?? route.destination.icao_code}</span>
+          <span className={styles.city}>{place(route.destination)}</span>
+        </span>
+      </div>
+      <div
+        className={styles.bar}
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(progress * 100)}
+        aria-label="Share of the route flown"
+      >
+        <span style={{ transform: `scaleX(${progress})` }} />
+      </div>
+      <p className={styles.left}>
+        {formatNumber(Math.round(left))} km to go of {formatNumber(Math.round(total))} km
+        {etaMin !== undefined && etaMin < 24 * 60 ? `, about ${etaMin >= 60 ? `${Math.floor(etaMin / 60)} h ${etaMin % 60} min` : `${etaMin} min`} at this speed` : ''}
+      </p>
+    </div>
+  )
 }
 
 function FlightDetail({ id }: { id: string }) {
-  const f = useFlight(id)
+  const { flight: f } = useFlight(id)
+  const route = useRoute(f?.callsign)
+  const photo = usePhoto(id)
   if (!f) return <Gone layer="flights" />
   const title = f.callsign ?? f.reg ?? f.hex.toUpperCase()
   const km = f.speedKt ? Math.round(f.speedKt * 1.852) : undefined
   const altM = f.altFt ? Math.round(f.altFt * 0.3048) : undefined
+  const trail = trails.get(f.hex)
+  const trailMin = trail.length > 1 ? Math.round((trail[trail.length - 1].t - trail[0].t) / 60_000) : 0
+  const pic = photo.data?.items
 
   return (
     <>
-      <DetailHeader layer="flights" title={title} subtitle={[f.type, f.reg].filter(Boolean).join(', ') || 'Unknown aircraft'} />
-      {f.emergency && <p style={{ color: 'var(--danger)', fontWeight: 600 }}>Emergency squawk: {f.emergency}</p>}
+      <DetailHeader
+        layer="flights"
+        title={title}
+        subtitle={[route.data?.airline?.name, f.type, f.reg].filter(Boolean).join(', ') || 'Unknown aircraft'}
+      />
+      {f.emergency && <p className={styles.emergency}>Emergency squawk: {f.emergency}</p>}
+      {route.data && <RouteBlock route={route.data} flight={f} />}
       <Lead
         value={f.ground ? 'Ground' : f.altFt !== null ? formatNumber(f.altFt) : 'Unknown'}
         unit={f.ground || f.altFt === null ? undefined : 'ft'}
@@ -249,16 +377,30 @@ function FlightDetail({ id }: { id: string }) {
           ['Speed', f.speedKt !== undefined ? <span className="num">{f.speedKt} kt, {km} km/h</span> : undefined],
           ['Heading', f.track !== undefined ? <span className="num">{Math.round(f.track)}°</span> : undefined],
           ['Climb rate', f.vertFpm ? <span className="num">{f.vertFpm > 0 ? '+' : ''}{formatNumber(f.vertFpm)} ft/min</span> : undefined],
+          ['Airline', route.data?.airline ? `${route.data.airline.name}${route.data.airline.country ? `, ${route.data.airline.country}` : ''}` : undefined],
+          ['From', route.data ? route.data.origin.name : undefined],
+          ['To', route.data ? route.data.destination.name : undefined],
           ['Squawk', f.squawk],
           ['Operator type', f.military ? 'Military' : undefined],
           ['ICAO address', <span className="num">{f.hex.toUpperCase()}</span>],
           ['Position', <span className="num">{formatCoord(f.lat, f.lon)}</span>],
-          ['Last signal', `${f.seen}s before the update`],
+          ['Trail', trailMin > 0 ? `Solid line shows the last ${trailMin} min seen by Pantau` : 'Trail builds up while you watch'],
         ]}
       />
+      {pic && (
+        <Section>
+          <figure className={styles.photo}>
+            <img src={pic.src} alt={`Photo of ${f.reg ?? 'this aircraft'}${f.type ? `, a ${f.type}` : ''}`} width={pic.width} height={pic.height} loading="lazy" />
+            <figcaption>
+              Photo by <a href={pic.link} target="_blank" rel="noreferrer noopener">{pic.photographer} on Planespotters</a>
+            </figcaption>
+          </figure>
+        </Section>
+      )}
       <Section>
-        <ExternalLink href={`https://adsb.lol/?icao=${f.hex}`}>Track on adsb.lol</ExternalLink>
+        <ExternalLink href={`https://adsb.lol/?icao=${f.hex}`}>Full history on adsb.lol</ExternalLink>
         {f.callsign && <ExternalLink href={`https://www.flightaware.com/live/flight/${encodeURIComponent(f.callsign)}`}>Flight on FlightAware</ExternalLink>}
+        <p className={styles.credit}>Route and airline from adsbdb. Planned routes can differ from today's flight.</p>
       </Section>
     </>
   )
