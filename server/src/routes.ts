@@ -7,6 +7,7 @@ import { loadVolcanoes } from './sources/volcanoes.js'
 import { loadFires } from './sources/fires.js'
 import { loadReports } from './sources/reports.js'
 import { loadCameras, resolveStream } from './sources/cameras.js'
+import { loadShips } from './sources/ships.js'
 
 const cellQuery = z.object({
   lat: z.coerce.number().min(-85).max(85),
@@ -21,6 +22,14 @@ export function registerRoutes(app: Hono) {
   app.get('/fires', (c) => serve(c, 'fires', { ttl: 1800, swr: 3600, sie: 86400 }, loadFires))
 
   app.get('/reports', (c) => serve(c, 'reports', { ttl: 120, swr: 300, sie: 3600 }, loadReports))
+
+  app.get('/ships', (c) => {
+    if (!process.env.AISSTREAM_KEY) {
+      c.header('Cache-Control', 'public, max-age=300, s-maxage=300')
+      return c.json({ error: 'needs_key' }, 503)
+    }
+    return serve(c, 'ships', { ttl: 60, swr: 240, sie: 1800 }, loadShips)
+  })
 
   app.get('/cameras', (c) => serve(c, 'cameras', { ttl: 60, swr: 120, sie: 86400 }, loadCameras))
 
