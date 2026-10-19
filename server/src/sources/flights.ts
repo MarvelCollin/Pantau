@@ -47,7 +47,26 @@ interface ReadsbResponse {
   now: number
 }
 
-async function point(lat: number, lon: number): Promise<ReadsbResponse> {
+const MAX_PARALLEL = 2
+let running = 0
+const waiting: (() => void)[] = []
+
+async function limited<T>(job: () => Promise<T>): Promise<T> {
+  if (running >= MAX_PARALLEL) await new Promise<void>((resolve) => waiting.push(resolve))
+  running++
+  try {
+    return await job()
+  } finally {
+    running--
+    waiting.shift()?.()
+  }
+}
+
+function point(lat: number, lon: number): Promise<ReadsbResponse> {
+  return limited(() => pointDirect(lat, lon))
+}
+
+async function pointDirect(lat: number, lon: number): Promise<ReadsbResponse> {
   try {
     return await fetchJson<ReadsbResponse>('adsb.lol', `https://api.adsb.lol/v2/point/${lat}/${lon}/${RADIUS_NM}`, { timeoutMs: 6000 })
   } catch {

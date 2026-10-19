@@ -7,13 +7,16 @@ import { Sources } from './ui/Sources'
 import { Latest } from './ui/Latest'
 import { DataLayers } from './layers/DataLayers'
 import { PointWeather } from './layers/weather'
+import { Search } from './ui/Search'
 import styles from './App.module.css'
 
 export default function App() {
   return (
     <div className={styles.app}>
       <h1 className="sr-only">Pantau, live map of Indonesia</h1>
-      <TopBar />
+      <TopBar>
+        <Search />
+      </TopBar>
       <main className={styles.stage}>
         <MapView>
           <DataLayers />
