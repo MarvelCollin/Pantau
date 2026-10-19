@@ -8,6 +8,7 @@ import { Latest } from './ui/Latest'
 import { DataLayers } from './layers/DataLayers'
 import { PointWeather } from './layers/weather'
 import { Search } from './ui/Search'
+import { Telemetry } from './ui/Telemetry'
 import styles from './App.module.css'
 
 const MapView = lazy(() => import('./map/MapView').then((m) => ({ default: m.MapView })))
@@ -36,6 +37,7 @@ export default function App() {
         <Sources />
       </Rail>
       <DetailPanel PointDetail={PointWeather} />
+      <Telemetry />
     </div>
   )
 }

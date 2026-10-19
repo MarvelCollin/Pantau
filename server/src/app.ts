@@ -2,16 +2,20 @@ import { Hono } from 'hono'
 import { etag } from 'hono/etag'
 import { registerRoutes } from './routes.js'
 
-const app = new Hono().basePath('/api')
+const api = new Hono()
 
-app.use('*', etag())
+api.use('*', etag())
 
-app.get('/health', (c) => {
+api.get('/health', (c) => {
   c.header('Cache-Control', 'no-store')
   return c.json({ ok: true, time: Date.now() })
 })
 
-registerRoutes(app)
+registerRoutes(api)
+
+const app = new Hono()
+app.route('/api', api)
+app.route('/pantau/api', api)
 
 app.notFound((c) => c.json({ error: 'not_found' }, 404))
 

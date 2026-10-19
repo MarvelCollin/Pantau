@@ -14,10 +14,13 @@ export class ApiError extends Error {
   }
 }
 
+const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, '')
+
 export async function getJson<T>(url: string, signal?: AbortSignal): Promise<T> {
+  const target = url.startsWith('/api/') ? API_BASE + url : url
   let res: Response
   try {
-    res = await fetch(url, { signal, headers: { accept: 'application/json' } })
+    res = await fetch(target, { signal, headers: { accept: 'application/json' } })
   } catch (error) {
     if ((error as Error).name === 'AbortError') throw error
     throw new ApiError(0, 'offline')

@@ -4,7 +4,9 @@ A live map of Indonesia built from free public data: flights, ships, satellites,
 
 Notes on every data source, with limits and quirks, are in [research.md](research.md).
 
-## Run it locally
+## Live at https://marvelcollin.com/pantau/
+
+
 
 Needs Node 22.
 

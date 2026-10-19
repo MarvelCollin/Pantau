@@ -13,7 +13,7 @@ export function TopBar({ children }: { children?: ReactNode }) {
 
   return (
     <header className={styles.bar}>
-      <a className={styles.brand} href="/" aria-label="Pantau home">
+      <a className={styles.brand} href={import.meta.env.BASE_URL} aria-label="Pantau home">
         <svg viewBox="0 0 32 32" width="22" height="22" aria-hidden="true">
           <circle cx="16" cy="16" r="10" fill="none" stroke="currentColor" strokeWidth="3" />
           <circle cx="16" cy="16" r="3.5" fill="var(--accent-strong)" />

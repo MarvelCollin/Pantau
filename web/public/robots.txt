@@ -1,5 +1,5 @@
 User-agent: *
 Allow: /
-Disallow: /api/
+Disallow: /pantau/api/
 
-Sitemap: https://pantau-plum.vercel.app/sitemap.xml
+Sitemap: https://marvelcollin.com/pantau/sitemap.xml

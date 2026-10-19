@@ -14,13 +14,17 @@
   },
   "rewrites": [
     {
+      "source": "/pantau/api/(.*)",
+      "destination": "/api"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api"
     }
   ],
   "headers": [
     {
-      "source": "/api/(.*)",
+      "source": "/(pantau/)?api/(.*)",
       "headers": [
         {
           "key": "X-Robots-Tag",
@@ -29,7 +33,7 @@
       ]
     },
     {
-      "source": "/(og.png|apple-touch-icon.png|icons/.*)",
+      "source": "/pantau/(og.png|apple-touch-icon.png|icons/.*)",
       "headers": [
         {
           "key": "Cache-Control",
@@ -38,16 +42,7 @@
       ]
     },
     {
-      "source": "/assets/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
-        }
-      ]
-    },
-    {
-      "source": "/fonts/(.*)",
+      "source": "/pantau/assets/(.*)",
       "headers": [
         {
           "key": "Cache-Control",
@@ -75,6 +70,18 @@
           "value": "SAMEORIGIN"
         }
       ]
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/pantau/",
+      "permanent": false
+    },
+    {
+      "source": "/pantau",
+      "destination": "/pantau/",
+      "permanent": false
     }
   ]
 }
