@@ -45,3 +45,46 @@
     top: calc(var(--topbar-h) + var(--space-3));
   }
 }
+
+.btn[data-busy='true'] {
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.message {
+  position: absolute;
+  right: calc(var(--space-3) + 52px);
+  bottom: calc(var(--space-6) + var(--space-2));
+  z-index: var(--z-map-ui);
+  max-width: 260px;
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  background: var(--ink);
+  color: var(--bg);
+  font-size: var(--text-sm);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--elev-1);
+}
+
+.message[data-show='false'] {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .message {
+    bottom: auto;
+    top: calc(var(--space-3));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn[data-busy='true'] {
+    animation: none;
+    opacity: 0.6;
+  }
+}

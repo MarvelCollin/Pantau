@@ -78,14 +78,23 @@ function applyTheme(theme: ThemeName) {
 const initialTheme = readTheme()
 applyTheme(initialTheme)
 
-function writeUrl(enabled: LayerId[], selection: Selection) {
+function buildUrl(enabled: LayerId[], selection: Selection): string {
   const params = new URLSearchParams(location.search)
   params.set('layers', enabled.join(','))
   if (!selection) params.delete('focus')
   else if (selection.kind === 'point') params.set('focus', `point:${selection.lat.toFixed(3)},${selection.lon.toFixed(3)}`)
   else params.set('focus', `${selection.layer}:${selection.id}`)
   const query = params.toString().replaceAll('%2C', ',').replaceAll('%3A', ':')
-  history.replaceState(null, '', `${location.pathname}?${query}${location.hash}`)
+  return `${location.pathname}?${query}${location.hash}`
+}
+
+function writeUrl(enabled: LayerId[], selection: Selection) {
+  history.replaceState(history.state, '', buildUrl(enabled, selection))
+}
+
+function viewHash(view: ViewState | null): string {
+  if (!view) return location.hash
+  return `#view=${view.zoom.toFixed(2)}/${view.center[1].toFixed(4)}/${view.center[0].toFixed(4)}`
 }
 
 export const useStore = create<Store>((set, get) => ({
@@ -112,8 +121,12 @@ export const useStore = create<Store>((set, get) => ({
     writeUrl(next, keepSelection)
   },
   select: (selection) => {
+    const prev = get().selection
     set({ selection, followFlight: false })
-    writeUrl(get().enabled, selection)
+    const url = buildUrl(get().enabled, selection)
+    if (!prev && selection) history.pushState({ pantau: 'detail' }, '', url)
+    else if (prev && !selection && history.state?.pantau === 'detail') history.back()
+    else history.replaceState(history.state, '', url)
   },
   setStatus: (id, status) => {
     const current = get().status[id]
@@ -134,3 +147,10 @@ export const useStore = create<Store>((set, get) => ({
 export function useLayerOn(id: LayerId): boolean {
   return useStore((s) => s.enabled.includes(id))
 }
+
+window.addEventListener('popstate', () => {
+  const selection = readSelection()
+  useStore.setState({ selection, followFlight: false })
+  const view = useStore.getState().view
+  if (view) history.replaceState(history.state, '', `${location.pathname}${location.search}${viewHash(view)}`)
+})

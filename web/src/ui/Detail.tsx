@@ -6,20 +6,20 @@ import styles from './Detail.module.css'
 
 const DEFAULT_TITLE = document.title
 
-export function DetailHeader({ layer, title, subtitle }: { layer: LayerId; title: ReactNode; subtitle?: ReactNode }) {
+export function DetailHeader({ layer, title, subtitle, kind }: { layer: LayerId; title: ReactNode; subtitle?: ReactNode; kind?: string }) {
   useEffect(() => {
     if (typeof title !== 'string') return
-    document.title = `${title}, ${layerInfo(layer).label.toLowerCase()} | Pantau`
+    document.title = `${title}, ${(kind ?? layerInfo(layer).label).toLowerCase()} | Pantau`
     return () => {
       document.title = DEFAULT_TITLE
     }
-  }, [title, layer])
+  }, [title, layer, kind])
 
   return (
     <header className={styles.header}>
       <p className={styles.kind}>
         <LayerGlyph id={layer} size={16} />
-        {layerInfo(layer).label}
+        {kind ?? layerInfo(layer).label}
       </p>
       <h2 className={styles.title} id="detail-title" tabIndex={-1}>
         {title}

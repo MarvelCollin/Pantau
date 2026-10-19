@@ -127,7 +127,7 @@ export function MapView({ children }: { children: ReactNode }) {
 
     instance.on('click', (e: MapMouseEvent) => {
       const feature = hitFeature(instance, e)
-      const { select, enabled } = useStore.getState()
+      const { select } = useStore.getState()
       if (feature) {
         const owner = interactiveLayers.get(feature.layer.id)
         const id = feature.properties?.id
@@ -137,10 +137,11 @@ export function MapView({ children }: { children: ReactNode }) {
           return
         }
       }
-      if (enabled.includes('weather')) {
+      if (useStore.getState().selection) select(null)
+      else {
         select({ kind: 'point', lat: e.lngLat.lat, lon: e.lngLat.lng })
         revealUnderPanel(instance, e)
-      } else select(null)
+      }
     })
 
     return () => {

@@ -101,7 +101,7 @@ function WeatherLayer() {
     }
   }, [on])
 
-  useLayerStatus('weather', on, query, { note: 'Tap the map for local weather', staleAfterMs: 30 * 60_000 })
+  useLayerStatus('weather', on, query, { note: 'Latest radar', staleAfterMs: 30 * 60_000 })
 
   if (!on || frames.length === 0) return null
   const time = frames[current].time * 1000
@@ -222,7 +222,7 @@ export function PointWeather({ lat, lon }: { lat: number; lon: number }) {
 
   return (
     <>
-      <DetailHeader layer="weather" title={name} subtitle={sub || formatCoord(lat, lon)} />
+      <DetailHeader layer="weather" kind="Weather here" title={name} subtitle={sub || formatCoord(lat, lon)} />
       {forecast.isError ? (
         <p className={styles.note}>Weather service is not answering. Try again in a minute.</p>
       ) : !c ? (
