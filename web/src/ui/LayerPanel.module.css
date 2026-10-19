@@ -31,7 +31,7 @@
   align-items: center;
   gap: var(--space-3);
   width: 100%;
-  min-height: 60px;
+  min-height: 56px;
   padding: var(--space-2);
   border: 0;
   border-radius: var(--radius-sm);
@@ -74,6 +74,9 @@
 .status {
   font-size: var(--text-sm);
   line-height: 1.35;
+}
+
+.row[data-on='true'] .status {
   min-height: 2.7em;
 }
 

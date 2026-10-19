@@ -40,6 +40,19 @@ function initialCamera(): Camera {
   return { bounds: [[94.5, -11.2], [141.5, 6.3]], fitBoundsOptions: { padding: 16 } }
 }
 
+const SHEET_QUERY = '(max-width: 900px)'
+
+function revealUnderPanel(map: MapLibre, e: MapMouseEvent) {
+  const canvas = map.getCanvas()
+  const width = canvas.clientWidth
+  const height = canvas.clientHeight
+  const sheet = matchMedia(SHEET_QUERY).matches
+  const covered = sheet ? e.point.y > height * 0.3 : e.point.x > width - 420
+  if (!covered) return
+  const target = sheet ? { x: width / 2, y: height * 0.18 } : { x: (width - 400) / 2, y: height / 2 }
+  map.panBy([e.point.x - target.x, e.point.y - target.y], { duration: matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 400 })
+}
+
 function addSelectionLayer(map: MapLibre) {
   map.addSource('selection', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
   map.addLayer({
@@ -120,11 +133,14 @@ export function MapView({ children }: { children: ReactNode }) {
         const id = feature.properties?.id
         if (owner && id !== undefined) {
           select({ kind: 'item', layer: owner, id: String(id) })
+          revealUnderPanel(instance, e)
           return
         }
       }
-      if (enabled.includes('weather')) select({ kind: 'point', lat: e.lngLat.lat, lon: e.lngLat.lng })
-      else select(null)
+      if (enabled.includes('weather')) {
+        select({ kind: 'point', lat: e.lngLat.lat, lon: e.lngLat.lng })
+        revealUnderPanel(instance, e)
+      } else select(null)
     })
 
     return () => {

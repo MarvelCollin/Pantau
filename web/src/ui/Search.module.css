@@ -101,7 +101,7 @@
   font-size: var(--text-sm);
 }
 
-@media (max-width: 760px) {
+@media (max-width: 900px) {
   .input {
     font-size: 16px;
   }

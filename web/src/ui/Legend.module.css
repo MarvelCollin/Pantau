@@ -1,0 +1,31 @@
+.legend {
+  list-style: none;
+  margin: 0 0 var(--space-2);
+  padding: 0 var(--space-2) 0 calc(var(--space-2) + 20px + var(--space-3));
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 18px;
+}
+
+.scale {
+  display: block;
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #9fe0f5 0%, #3aa0e8 35%, #1a5fc4 60%, #f6d34d 80%, #e2453c 100%);
+}
+
+.scaleLabels {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}

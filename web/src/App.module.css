@@ -12,7 +12,7 @@
   bottom: 0;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 900px) {
   .stage {
     left: 0;
     bottom: 52px;

@@ -55,7 +55,7 @@
   }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 900px) {
   .panel {
     top: auto;
     left: 0;

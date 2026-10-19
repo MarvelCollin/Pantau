@@ -60,7 +60,3 @@ export function applyBasemap(map: MapLibre, palette: BasemapPalette) {
     for (const [key, value] of Object.entries(paint)) map.setPaintProperty(layer.id, key as never, value as never)
   }
 }
-
-export function firstLabelLayer(map: MapLibre): string | undefined {
-  return map.getStyle().layers.find((l) => l.type === 'symbol')?.id
-}

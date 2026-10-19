@@ -68,7 +68,7 @@ export function Search() {
   const input = useRef<HTMLInputElement>(null)
   const results = useResults(text)
   const listId = useId()
-  const [narrow] = useState(() => matchMedia('(max-width: 760px)').matches)
+  const [narrow] = useState(() => matchMedia('(max-width: 900px)').matches)
   const { select, requestFly, toggleLayer } = useStore.getState()
 
   const choose = (r: Result) => {

@@ -2,8 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useStore } from '../state/store'
 import type { GeoJSONSource, LayerSpecification, SourceSpecification } from 'maplibre-gl'
 import type { FeatureCollection } from 'geojson'
-import { useMap, interactiveLayers } from './context'
-import { firstLabelLayer } from './basemap'
+import { useMap, interactiveLayers, firstLabelLayer } from './context'
 import type { LayerId } from '../layers/registry'
 
 type DataLayer = Exclude<LayerSpecification, { type: 'background' }>

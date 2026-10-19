@@ -4,6 +4,7 @@ import { formatAgo, formatNumber } from '../lib/format'
 import { useNow } from '../lib/useNow'
 import { LayerGlyph } from './LayerGlyph'
 import { SwitchTrack } from './Switch'
+import { Legend } from './Legend'
 import { prefetchLayer } from '../layers/prefetch'
 import styles from './LayerPanel.module.css'
 
@@ -94,6 +95,7 @@ export function LayerPanel() {
                       </span>
                       <SwitchTrack on={on} />
                     </button>
+                    {on && <Legend id={info.id} label={info.label} />}
                   </li>
                 )
               })}

@@ -9,3 +9,7 @@ export function useMap(): MapLibre | null {
 }
 
 export const interactiveLayers = new Map<string, LayerId>()
+
+export function firstLabelLayer(map: MapLibre): string | undefined {
+  return map.getStyle().layers.find((l) => l.type === 'symbol')?.id
+}

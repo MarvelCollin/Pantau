@@ -94,7 +94,7 @@
   font-size: var(--text-xs);
 }
 
-@media (max-width: 760px) {
+@media (max-width: 900px) {
   .timeline {
     bottom: var(--space-3);
   }
