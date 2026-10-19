@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { useStore } from '../state/store'
 import type { GeoJSONSource, LayerSpecification, SourceSpecification } from 'maplibre-gl'
 import type { FeatureCollection } from 'geojson'
 import { useMap, interactiveLayers } from './context'
@@ -35,6 +36,7 @@ export function useMapLayer({ owner, sourceId, source, layers, data, visible, in
       if (map.getLayer(layer.id)) continue
       map.addLayer({ ...layer, source: sourceId, metadata: { pantau: owner } } as LayerSpecification, before)
     }
+    if (map.getLayer('selection-ring')) map.moveLayer('selection-ring')
     for (const id of interactive) interactiveLayers.set(id, owner)
     return () => {
       for (const id of interactive) interactiveLayers.delete(id)
@@ -48,6 +50,15 @@ export function useMapLayer({ owner, sourceId, source, layers, data, visible, in
     const src = map.getSource(sourceId) as GeoJSONSource | undefined
     src?.setData(data)
   }, [map, sourceId, data])
+
+  const selectedId = useStore((s) => (s.selection?.kind === 'item' && s.selection.layer === owner ? s.selection.id : null))
+
+  useEffect(() => {
+    if (!map || !selectedId || !data) return
+    const feature = data.features.find((f) => String(f.properties?.id) === selectedId)
+    const ring = map.getSource('selection') as GeoJSONSource | undefined
+    ring?.setData({ type: 'FeatureCollection', features: feature ? [{ ...feature, properties: {} }] : [] })
+  }, [map, selectedId, data])
 
   useEffect(() => {
     if (!map) return

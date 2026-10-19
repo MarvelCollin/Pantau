@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Map as MapLibre, setWorkerUrl, type MapMouseEvent } from 'maplibre-gl'
+import { Map as MapLibre, setWorkerUrl, type GeoJSONSource, type MapMouseEvent } from 'maplibre-gl'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { MapContext, interactiveLayers } from './context'
 import { applyBasemap, BASEMAP_STYLE } from './basemap'
 import { registerIcons } from './icons'
 import { useStore } from '../state/store'
-import { basemapPalettes } from '../theme'
+import { basemapPalettes, cssVar } from '../theme'
 import { MapTooltip, type TooltipState } from '../ui/MapTooltip'
 import { MapControls } from '../ui/MapControls'
 import styles from './MapView.module.css'
@@ -27,6 +27,22 @@ function hitFeature(map: MapLibre, e: MapMouseEvent) {
     { layers: ids },
   )
   return features[0]
+}
+
+function addSelectionLayer(map: MapLibre) {
+  map.addSource('selection', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
+  map.addLayer({
+    id: 'selection-ring',
+    type: 'circle',
+    source: 'selection',
+    metadata: { pantau: 'selection' },
+    paint: {
+      'circle-radius': 16,
+      'circle-color': 'rgba(0,0,0,0)',
+      'circle-stroke-width': 2.5,
+      'circle-stroke-color': cssVar('--ink'),
+    },
+  })
 }
 
 export function MapView({ children }: { children: ReactNode }) {
@@ -66,6 +82,7 @@ export function MapView({ children }: { children: ReactNode }) {
     instance.once('load', () => {
       applyBasemap(instance, basemapPalettes[useStore.getState().theme])
       registerIcons(instance)
+      addSelectionLayer(instance)
       publishView()
       setMap(instance)
     })
@@ -103,8 +120,16 @@ export function MapView({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
-    if (map) applyBasemap(map, basemapPalettes[theme])
+    if (!map) return
+    applyBasemap(map, basemapPalettes[theme])
+    map.setPaintProperty('selection-ring', 'circle-stroke-color', cssVar('--ink'))
   }, [map, theme])
+
+  const hasSelection = useStore((s) => s.selection?.kind === 'item')
+  useEffect(() => {
+    if (!map || hasSelection) return
+    ;(map.getSource('selection') as GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features: [] })
+  }, [map, hasSelection])
 
   useEffect(() => {
     if (!map || !flyTo) return

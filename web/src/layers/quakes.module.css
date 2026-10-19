@@ -1,0 +1,16 @@
+.tsunami {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.tsunami[data-risk='true'] {
+  color: var(--danger);
+}
+
+.shakemap {
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}

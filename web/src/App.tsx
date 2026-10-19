@@ -4,6 +4,7 @@ import { Rail } from './ui/Rail'
 import { LayerPanel } from './ui/LayerPanel'
 import { DetailPanel } from './ui/DetailPanel'
 import { Sources } from './ui/Sources'
+import { Latest } from './ui/Latest'
 import { DataLayers } from './layers/DataLayers'
 import styles from './App.module.css'
 
@@ -19,6 +20,7 @@ export default function App() {
       </main>
       <Rail>
         <LayerPanel />
+        <Latest />
         <Sources />
       </Rail>
       <DetailPanel />

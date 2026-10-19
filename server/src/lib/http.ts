@@ -1,4 +1,4 @@
-const USER_AGENT = 'pantau/1.0 (+https://github.com/MarvelCollin/pantau)'
+const USER_AGENT = 'pantau/1.0 (+https://github.com/MarvelCollin/Pantau)'
 
 export class UpstreamError extends Error {
   constructor(

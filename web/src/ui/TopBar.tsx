@@ -36,7 +36,7 @@ export function TopBar({ children }: { children?: ReactNode }) {
         </button>
         <a
           className={styles.icon}
-          href="https://github.com/MarvelCollin/pantau"
+          href="https://github.com/MarvelCollin/Pantau"
           target="_blank"
           rel="noreferrer noopener"
           aria-label="Source code on GitHub, opens in a new tab"
