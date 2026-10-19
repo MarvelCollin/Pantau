@@ -6,6 +6,7 @@ import { DetailPanel } from './ui/DetailPanel'
 import { Sources } from './ui/Sources'
 import { Latest } from './ui/Latest'
 import { DataLayers } from './layers/DataLayers'
+import { PointWeather } from './layers/weather'
 import styles from './App.module.css'
 
 export default function App() {
@@ -23,7 +24,7 @@ export default function App() {
         <Latest />
         <Sources />
       </Rail>
-      <DetailPanel />
+      <DetailPanel PointDetail={PointWeather} />
     </div>
   )
 }

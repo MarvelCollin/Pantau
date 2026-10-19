@@ -1,0 +1,101 @@
+.timeline {
+  position: absolute;
+  left: 50%;
+  bottom: var(--space-4);
+  z-index: var(--z-map-ui);
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-1);
+  background: var(--raised);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  box-shadow: var(--elev-1);
+  font-size: var(--text-sm);
+}
+
+.play {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--strong);
+  color: var(--bg);
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+
+.play:hover {
+  background: var(--ink);
+}
+
+.time {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+  min-width: 8.5em;
+}
+
+.rel {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.credit {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.note {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.skeletonBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.hoursTitle {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.hours {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 var(--space-2);
+  display: flex;
+  gap: var(--space-4);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+
+.hour {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: var(--text-sm);
+}
+
+.hourTime {
+  color: var(--muted);
+}
+
+.rain {
+  color: var(--c-reports);
+  font-size: var(--text-xs);
+}
+
+@media (max-width: 760px) {
+  .timeline {
+    bottom: var(--space-3);
+  }
+}

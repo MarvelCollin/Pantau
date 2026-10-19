@@ -134,11 +134,18 @@ export function MapView({ children }: { children: ReactNode }) {
     map.setPaintProperty('selection-ring', 'circle-stroke-color', cssVar('--ink'))
   }, [map, theme])
 
-  const hasSelection = useStore((s) => s.selection?.kind === 'item')
+  const selection = useStore((s) => s.selection)
   useEffect(() => {
-    if (!map || hasSelection) return
-    ;(map.getSource('selection') as GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features: [] })
-  }, [map, hasSelection])
+    if (!map || selection?.kind === 'item') return
+    const source = map.getSource('selection') as GeoJSONSource | undefined
+    source?.setData({
+      type: 'FeatureCollection',
+      features:
+        selection?.kind === 'point'
+          ? [{ type: 'Feature', geometry: { type: 'Point', coordinates: [selection.lon, selection.lat] }, properties: {} }]
+          : [],
+    })
+  }, [map, selection])
 
   useEffect(() => {
     if (!map || !flyTo) return

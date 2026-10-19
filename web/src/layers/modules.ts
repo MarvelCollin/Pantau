@@ -7,6 +7,7 @@ import { firesModule } from './fires'
 import { reportsModule } from './reports'
 import { camerasModule } from './cameras'
 import { satellitesModule } from './satellites'
+import { weatherModule } from './weather'
 
 export interface LayerModule {
   Layer: ComponentType
@@ -20,5 +21,6 @@ export const layerModules: Partial<Record<LayerId, LayerModule>> = {
   volcanoes: volcanoesModule,
   fires: firesModule,
   reports: reportsModule,
+  weather: weatherModule,
   cameras: camerasModule,
 }
