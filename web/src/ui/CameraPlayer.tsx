@@ -30,7 +30,7 @@ function HlsVideo({ url, title, onState }: { url: string; title: string; onState
       el.src = url
       el.play().catch(() => undefined)
     } else {
-      import('hls.js').then(({ default: Hls }) => {
+      import('hls.js/dist/hls.light.mjs').then(({ default: Hls }) => {
         if (destroyed) return
         if (!Hls.isSupported()) return failed()
         const hls = new Hls({ lowLatencyMode: true, maxBufferLength: 10, backBufferLength: 0 })

@@ -21,7 +21,7 @@
 .summary::after {
   content: '+';
   margin-left: var(--space-2);
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
 }
 
 .sources[open] .summary::after {
