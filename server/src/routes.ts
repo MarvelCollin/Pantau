@@ -7,7 +7,8 @@ import { loadVolcanoes } from './sources/volcanoes.js'
 import { loadVolcanoReport } from './sources/volcanoReport.js'
 import { loadFires } from './sources/fires.js'
 import { loadReports } from './sources/reports.js'
-import { loadKarhutla } from './sources/karhutla.js'
+import { KARHUTLA_POLICY, loadKarhutla } from './sources/karhutla.js'
+import { loadSmoke } from './sources/smoke.js'
 import { loadFireCrews } from './sources/fireCrews.js'
 import { loadAir } from './sources/air.js'
 import { loadCameras, resolveStream } from './sources/cameras.js'
@@ -39,7 +40,9 @@ export function registerRoutes(app: Hono) {
 
   app.get('/fires', (c) => serve(c, 'fires', { ttl: 1800, swr: 3600, sie: 86400 }, loadFires))
 
-  app.get('/karhutla', (c) => serve(c, 'karhutla', { ttl: 900, swr: 1800, sie: 86400 }, loadKarhutla))
+  app.get('/karhutla', (c) => serve(c, 'karhutla', KARHUTLA_POLICY, loadKarhutla))
+
+  app.get('/karhutla/smoke', (c) => serve(c, 'karhutla:smoke', { ttl: 5400, swr: 3600, sie: 21600 }, loadSmoke))
 
   app.get('/karhutla/crews', (c) => serve(c, 'karhutla:crews', { ttl: 1800, swr: 3600, sie: 86400 }, loadFireCrews))
 

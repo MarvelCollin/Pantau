@@ -3,8 +3,9 @@ import { useQuakes } from '../layers/quakes'
 import { useVolcanoes, levelNames } from '../layers/volcanoes'
 import { useKarhutla, provinceTotals } from '../layers/karhutla'
 import { useAir, airCategories } from '../layers/air'
+import { useSmoke, useSmokeHour, smokeHours, describeSpot } from '../layers/smoke'
 import { useStore, useLayerOn } from '../state/store'
-import { formatAgo, formatNumber } from '../lib/format'
+import { formatAgo, formatClock, formatNumber } from '../lib/format'
 import { useNow } from '../lib/useNow'
 import styles from './Latest.module.css'
 
@@ -177,10 +178,70 @@ function WorstAir() {
   )
 }
 
+function SmokeForecast() {
+  const on = useLayerOn('smoke')
+  const { data } = useSmoke(on)
+  const { hour, setHour } = useSmokeHour()
+  const select = useStore((s) => s.select)
+  const fly = useStore((s) => s.requestFly)
+  if (!on || !data) return null
+  const { start, plumes } = data.items
+  const top = plumes.slice(0, 5)
+  const step = hour === 0 ? 24 : hour
+
+  return (
+    <section className={styles.latest} aria-labelledby="smoke-forecast">
+      <h2 id="smoke-forecast" className={styles.title}>
+        Where the smoke goes
+      </h2>
+      <div className={styles.hours} role="group" aria-label="Smoke forecast time">
+        {smokeHours.map((h) => (
+          <button key={h} type="button" className={styles.hour} aria-pressed={hour === h} onClick={() => setHour(h)}>
+            {h === 0 ? 'Now' : `+${h} h`}
+            <span className={styles.hourClock}>{formatClock((start + h * 3600) * 1000)}</span>
+          </button>
+        ))}
+      </div>
+      {top.length === 0 ? (
+        <p className={styles.empty}>No large fire clusters in the past 24 hours.</p>
+      ) : (
+        <ul className={styles.list}>
+          {top.map((p) => {
+            const at = p.path[Math.min(step, p.path.length - 1)]
+            return (
+              <li key={p.id}>
+                <button
+                  type="button"
+                  className={styles.item}
+                  onClick={() => {
+                    select({ kind: 'item', layer: 'smoke', id: p.id })
+                    fly((p.lon + at[0]) / 2, (p.lat + at[1]) / 2, 6.5)
+                  }}
+                >
+                  <span className={`num ${styles.mag}`} data-level={4}>
+                    {formatNumber(p.hotspots)}
+                  </span>
+                  <span className={styles.text}>
+                    <span className={styles.place}>{p.regency || p.province}</span>
+                    <span className={styles.when}>
+                      +{step} h: {describeSpot(p, step)}
+                    </span>
+                  </span>
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </section>
+  )
+}
+
 export function Latest() {
   return (
     <>
       <VolcanoAlerts />
+      <SmokeForecast />
       <KarhutlaProvinces />
       <WorstAir />
       <LatestQuakes />

@@ -7,6 +7,7 @@ const paths: Partial<Record<LayerId, { path: string; staleTime: number }>> = {
   volcanoes: { path: '/api/volcanoes', staleTime: 15 * 60_000 },
   fires: { path: '/api/fires', staleTime: 20 * 60_000 },
   karhutla: { path: '/api/karhutla', staleTime: 15 * 60_000 },
+  smoke: { path: '/api/karhutla/smoke', staleTime: 30 * 60_000 },
   firecrews: { path: '/api/karhutla/crews', staleTime: 30 * 60_000 },
   air: { path: '/api/air', staleTime: 15 * 60_000 },
   reports: { path: '/api/reports', staleTime: 5 * 60_000 },

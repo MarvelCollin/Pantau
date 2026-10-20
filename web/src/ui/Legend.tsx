@@ -71,6 +71,11 @@ const legends: Partial<Record<LayerId, Item[]>> = {
     { shape: 'circle', color: 'var(--lvl-3)', label: 'Medium', size: 10 },
     { shape: 'circle', color: 'var(--lvl-4)', label: 'High confidence', size: 12 },
   ],
+  smoke: [
+    { shape: 'circle', color: 'var(--lvl-4)', label: 'Fire cluster' },
+    { shape: 'dash', color: c('smoke'), label: 'Smoke path' },
+    { shape: 'circle', color: 'rgb(160 122 82)', label: 'PM2.5 haze', faded: true },
+  ],
   firecrews: [
     { shape: 'ring', color: c('firecrews'), label: 'Field post' },
     { shape: 'circle', color: c('firecrews'), label: 'Firefighting' },

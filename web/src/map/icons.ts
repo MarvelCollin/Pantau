@@ -57,6 +57,18 @@ const shapes: Record<string, Draw> = {
     ctx.closePath()
     ctx.fill()
   },
+  arrow: (ctx) => {
+    ctx.beginPath()
+    ctx.moveTo(32, 4)
+    ctx.lineTo(50, 26)
+    ctx.lineTo(37, 26)
+    ctx.lineTo(37, 60)
+    ctx.lineTo(27, 60)
+    ctx.lineTo(27, 26)
+    ctx.lineTo(14, 26)
+    ctx.closePath()
+    ctx.fill()
+  },
   drop: (ctx) => {
     ctx.beginPath()
     ctx.moveTo(32, 6)

@@ -24,6 +24,7 @@ A live map of Indonesia built only from free public data. Flights, ships, satell
 | Volcanoes | MAGMA ESDM | Alert level, latest 6 hourly observation report, seismic counts, photo, advice |
 | Fire hotspots | NASA FIRMS | Fire power, confidence, hotspots within 10 km, nearest city |
 | Karhutla | SiPongi+ Kemenhut | Village, district, regency and province, confidence, satellite, hotspot count for the regency, top provinces in the side panel |
+| Smoke drift | SiPongi+, Open-Meteo, CAMS | Where smoke from each fire cluster heads over 24 hours, position at +6, +12 and +24 h with the nearest city, PM2.5 haze cloud you can step through time, surface wind arrows |
 | Fire crews | SiPongi+ Kemenhut | Manggala Agni field posts, firefighting reports with area put out, ground check findings, field notes |
 | Citizen reports | PetaBencana | Report text, photo, flood depth |
 | Air quality | SiPongi+ AQMS | Hourly ISPU per station with category, health advice and nearest other station, worst stations in the side panel |
@@ -97,6 +98,7 @@ There are four layers of cache.
 | `/api/ships` | 2 min | 2 min |
 | `/api/reports`, `/api/cameras` | 4 to 5 min | 5 min |
 | `/api/karhutla`, `/api/air` | 15 min | 15 min |
+| `/api/karhutla/smoke` | 90 min | 60 min |
 | `/api/karhutla/crews`, `/api/fires`, `/api/volcanoes` | 30 min | 30 min |
 | `/api/volcanoes/report` | 30 min | when opened |
 

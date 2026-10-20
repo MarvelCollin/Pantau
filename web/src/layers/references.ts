@@ -26,6 +26,11 @@ export const references: Record<LayerId | 'point' | 'basemap', Reference[]> = {
   volcanoes: [{ name: 'MAGMA Indonesia, ESDM', what: 'Alert levels and observation reports', url: 'https://magma.esdm.go.id' }],
   fires: [{ name: 'NASA FIRMS', what: 'VIIRS hotspots, past 24 hours', url: 'https://firms.modaps.eosdis.nasa.gov/active_fire/' }],
   karhutla: [{ name: 'SiPongi+, Ministry of Forestry', what: 'Hotspots with village, district, regency and province', url: 'https://sipongi.gakkum.kehutanan.go.id' }],
+  smoke: [
+    { name: 'SiPongi+, Ministry of Forestry', what: 'Fire clusters', url: 'https://sipongi.gakkum.kehutanan.go.id' },
+    { name: 'Open-Meteo', what: 'Wind forecast at 10 m and 925 hPa', url: 'https://open-meteo.com/en/docs' },
+    { name: 'Open-Meteo Air Quality, CAMS', what: 'PM2.5 forecast with fire smoke', url: 'https://open-meteo.com/en/docs/air-quality-api' },
+  ],
   firecrews: [{ name: 'SiPongi+, Ministry of Forestry', what: 'Manggala Agni posts, firefighting and ground check reports', url: 'https://sipongi.gakkum.kehutanan.go.id/hard-manggala-agni' }],
   reports: [{ name: 'PetaBencana', what: 'Citizen disaster reports', url: 'https://docs.petabencana.id' }],
   weather: [{ name: 'RainViewer', what: 'Rain radar tiles', url: 'https://www.rainviewer.com/api.html' }],

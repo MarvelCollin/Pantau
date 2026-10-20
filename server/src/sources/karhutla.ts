@@ -2,6 +2,8 @@ import { fetchJson, round, UpstreamError } from '../lib/http.js'
 
 export const SIPONGI_API = 'https://opsroom.sipongidata.my.id/api'
 
+export const KARHUTLA_POLICY = { ttl: 900, swr: 1800, sie: 86400 }
+
 export type Place = [village: string, district: string, regency: string, province: string]
 
 export type KarhutlaHotspot = [

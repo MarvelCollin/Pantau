@@ -51,6 +51,10 @@ SiPongi+ is the Ministry of Forestry (Kemenhut) karhutla system. The old sipongi
 /api/getSummaryHotspot?wilayah=IN&late=24 gives counts per satellite and confidence level.
 /api/overlay/rawan/hotspot holds fire prone area overlays, /api/boundaries?level=provinsi or kabupaten on opsroom-sipongi.gakkum.kehutanan.go.id holds admin boundaries.
 
+Smoke drift
+
+SiPongi's /api/gfs wind feed took 36 seconds, weighed 1.9 MB and still held a model run from July, so it is not used. Pantau groups medium and high confidence hotspots into 0.5 degree clusters, keeps the 30 biggest, and asks Open-Meteo for hourly wind on a 1 degree grid around them (up to 220 points, 110 per request). https://api.open-meteo.com/v1/forecast takes comma separated latitude and longitude lists and returns one forecast per point. Smoke paths step hour by hour along the 925 hPa wind, about 750 m up, where peat smoke tends to travel. PM2.5 comes from https://air-quality-api.open-meteo.com/v1/air-quality on the same grid. It is the CAMS model, which includes fire emissions, so haze from Kalimantan and Sumatra shows up in it. Each point counts as one call against Open-Meteo's free 10,000 a day, so the result is cached for 90 minutes.
+
 BRIN runs its own hotspot viewer at https://hotspot.brin.go.id with /getHS and /getHSdetail behind it, built for its own map. BMKG publishes hotspot maps at https://www.bmkg.go.id/cuaca/satelit/polar-hotspot but returns 403 to scripts. BNPB shows SiPongi+ data on https://gis.bnpb.go.id/karhutla2026.
 
 Floods and crowd reports
