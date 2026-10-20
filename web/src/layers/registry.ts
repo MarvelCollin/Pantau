@@ -42,7 +42,7 @@ export const layers: LayerInfo[] = [
 
 export const layerIds = layers.map((l) => l.id)
 
-export const defaultLayers: LayerId[] = ['flights', 'quakes', 'volcanoes']
+export const defaultLayers: LayerId[] = ['flights', 'quakes', 'volcanoes', 'karhutla', 'smoke', 'firecrews', 'reports']
 
 export function layerInfo(id: LayerId): LayerInfo {
   return layers.find((l) => l.id === id)!
