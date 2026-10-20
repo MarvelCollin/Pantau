@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { Pause, Play } from '@phosphor-icons/react'
 import { useQuakes } from '../layers/quakes'
 import { useVolcanoes, levelNames } from '../layers/volcanoes'
 import { useKarhutla, provinceTotals } from '../layers/karhutla'
@@ -181,22 +182,40 @@ function WorstAir() {
 function SmokeForecast() {
   const on = useLayerOn('smoke')
   const { data } = useSmoke(on)
-  const { hour, setHour } = useSmokeHour()
+  const { hour, t, playing, setHour, togglePlay } = useSmokeHour()
   const select = useStore((s) => s.select)
   const fly = useStore((s) => s.requestFly)
   if (!on || !data) return null
   const { start, plumes } = data.items
   const top = plumes.slice(0, 5)
-  const step = hour === 0 ? 24 : hour
+  const step = playing ? Math.max(1, Math.round(t)) : hour === 0 ? 24 : hour
 
   return (
     <section className={styles.latest} aria-labelledby="smoke-forecast">
       <h2 id="smoke-forecast" className={styles.title}>
         Where the smoke goes
       </h2>
+      <div className={styles.player}>
+        <button
+          type="button"
+          className={styles.play}
+          onClick={togglePlay}
+          aria-label={playing ? 'Pause the smoke forecast' : 'Play the next 24 hours of smoke'}
+          aria-pressed={playing}
+        >
+          {playing ? <Pause size={14} weight="fill" aria-hidden="true" /> : <Play size={14} weight="fill" aria-hidden="true" />}
+        </button>
+        <span className={styles.playClock}>
+          <span className="num">{formatClock((start + t * 3600) * 1000)} WIB</span>
+          <span className={styles.when}>{t < 0.5 ? 'now' : `+${Math.round(t)} h`}</span>
+        </span>
+        <span className={styles.track} aria-hidden="true">
+          <span className={styles.fill} style={{ transform: `scaleX(${Math.min(1, t / 24)})` }} />
+        </span>
+      </div>
       <div className={styles.hours} role="group" aria-label="Smoke forecast time">
         {smokeHours.map((h) => (
-          <button key={h} type="button" className={styles.hour} aria-pressed={hour === h} onClick={() => setHour(h)}>
+          <button key={h} type="button" className={styles.hour} aria-pressed={!playing && hour === h} onClick={() => setHour(h)}>
             {h === 0 ? 'Now' : `+${h} h`}
             <span className={styles.hourClock}>{formatClock((start + h * 3600) * 1000)}</span>
           </button>

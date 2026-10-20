@@ -17,6 +17,7 @@ interface Options {
   visible: boolean
   interactive?: string[]
   belowLabels?: boolean
+  selectable?: boolean
 }
 
 const HOVER = ['boolean', ['feature-state', 'hover'], false]
@@ -37,7 +38,7 @@ function withHover<T extends LayerSpec>(layer: T, interactive: string[]): T {
 
 export const emptyCollection: FeatureCollection = { type: 'FeatureCollection', features: [] }
 
-export function useMapLayer({ owner, sourceId, source, layers, data, visible, interactive = [], belowLabels }: Options) {
+export function useMapLayer({ owner, sourceId, source, layers, data, visible, interactive = [], belowLabels, selectable = true }: Options) {
   const map = useMap()
   const sourceRef = useRef(source)
   const layersRef = useRef(layers)
@@ -70,12 +71,12 @@ export function useMapLayer({ owner, sourceId, source, layers, data, visible, in
   const selectedId = useStore((s) => (s.selection?.kind === 'item' && s.selection.layer === owner ? s.selection.id : null))
 
   useEffect(() => {
-    if (!map || !selectedId || !data) return
+    if (!map || !selectable || !selectedId || !data) return
     const feature = data.features.find((f) => String(f.properties?.id) === selectedId)
     const ring = map.getSource('selection') as GeoJSONSource | undefined
     ring?.setData({ type: 'FeatureCollection', features: feature ? [{ ...feature, properties: {} }] : [] })
     mapHooks.selection(feature && feature.geometry.type === 'Point' ? (feature.geometry.coordinates as [number, number]) : null)
-  }, [map, selectedId, data])
+  }, [map, selectable, selectedId, data])
 
   useEffect(() => {
     if (!map) return

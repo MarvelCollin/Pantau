@@ -1,8 +1,10 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import type { FeatureCollection } from 'geojson'
 import { formatAgo, formatCoord, formatNumber, formatWib } from '../lib/format'
 import { useLayerOn } from '../state/store'
 import { useMapLayer } from '../map/useMapLayer'
+import { useMap } from '../map/context'
+import { prefersReducedMotion } from '../lib/motion'
 import { usePalette } from '../map/usePalette'
 import { cssVar } from '../theme'
 import { useLayerStatus } from './useLayerStatus'
@@ -29,6 +31,8 @@ export interface Karhutla {
 export const confidenceNames = { l: 'Low', m: 'Medium', h: 'High' }
 
 const satelliteNames = { m: 'Terra or Aqua, MODIS', s: 'Suomi NPP, VIIRS', n: 'NOAA-20, VIIRS' }
+
+const GLOW_MS = 1400
 
 export function hotspotId(h: KarhutlaHotspot) {
   return `${h[0]},${h[1]},${h[4]}`
@@ -90,6 +94,18 @@ function KarhutlaLayer() {
     const color = ['match', ['get', 'conf'], 'h', cssVar('--lvl-4'), 'm', cssVar('--lvl-3'), cssVar('--lvl-2')]
     return [
       {
+        id: 'karhutla-glow',
+        type: 'circle' as const,
+        filter: ['==', ['get', 'conf'], 'h'],
+        paint: {
+          'circle-radius': ['interpolate', ['linear'], ['zoom'], 3, 5, 9, 18],
+          'circle-color': cssVar('--lvl-4'),
+          'circle-blur': 0.9,
+          'circle-opacity': 0.12,
+          'circle-opacity-transition': { duration: GLOW_MS, delay: 0 },
+        },
+      },
+      {
         id: 'karhutla-dot',
         type: 'circle' as const,
         layout: { 'circle-sort-key': ['get', 'rank'] },
@@ -113,6 +129,18 @@ function KarhutlaLayer() {
     visible: on,
     interactive: ['karhutla-dot'],
   })
+
+  const map = useMap()
+  useEffect(() => {
+    if (!map || !on || prefersReducedMotion()) return
+    let bright = false
+    const timer = setInterval(() => {
+      if (document.visibilityState !== 'visible' || !map.getLayer('karhutla-glow')) return
+      bright = !bright
+      map.setPaintProperty('karhutla-glow', 'circle-opacity', bright ? 0.5 : 0.12)
+    }, GLOW_MS)
+    return () => clearInterval(timer)
+  }, [map, on])
 
   const high = useMemo(() => payload?.hotspots.filter((h) => h[2] === 'h').length, [payload])
   useLayerStatus('karhutla', on, query, {

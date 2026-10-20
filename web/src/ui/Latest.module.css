@@ -77,6 +77,53 @@
   padding: 0 var(--space-2);
 }
 
+.player {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0 var(--space-2);
+}
+
+.play {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--strong);
+  color: var(--bg);
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+
+.play:hover {
+  background: var(--ink);
+}
+
+.playClock {
+  display: flex;
+  flex-direction: column;
+  min-width: 6.5em;
+  font-size: var(--text-sm);
+  line-height: 1.25;
+}
+
+.track {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--hairline);
+  overflow: hidden;
+}
+
+.fill {
+  display: block;
+  height: 100%;
+  background: var(--c-smoke);
+  transform-origin: left center;
+}
+
 .hours {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
