@@ -3,7 +3,7 @@ import { Pause, Play } from '@phosphor-icons/react'
 import { useQuakes } from '../layers/quakes'
 import { useVolcanoes, levelNames } from '../layers/volcanoes'
 import { useKarhutla, provinceTotals } from '../layers/karhutla'
-import { useAir, airCategories } from '../layers/air'
+import { useAir, airCategories, ispuLabel } from '../layers/air'
 import { useSmoke, useSmokeHour, smokeHours, describeSpot } from '../layers/smoke'
 import { useStore, useLayerOn } from '../state/store'
 import { formatAgo, formatClock, formatNumber } from '../lib/format'
@@ -163,7 +163,7 @@ function WorstAir() {
               }}
             >
               <span className={`num ${styles.mag}`} data-level={s.ispu > 200 ? 4 : 3}>
-                {s.ispu}
+                {ispuLabel(s.ispu)}
               </span>
               <span className={styles.text}>
                 <span className={styles.place}>{s.city}</span>

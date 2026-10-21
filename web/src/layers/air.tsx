@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import type { FeatureCollection } from 'geojson'
-import { formatAgo, formatCoord, formatWib } from '../lib/format'
+import { formatAgo, formatCoord, formatNumber, formatWib } from '../lib/format'
 import { useLayerOn } from '../state/store'
 import { useMapLayer } from '../map/useMapLayer'
 import { usePalette } from '../map/usePalette'
@@ -33,6 +33,12 @@ export const airCategories: Record<AirCategory, { en: string; id: string; color:
   hazardous: { en: 'Hazardous', id: 'Berbahaya', color: '--ink', advice: 'Stay indoors with windows shut and an air purifier if you have one. Follow local health office and BPBD advice.' },
 }
 
+export const ISPU_TOP = 500
+
+export function ispuLabel(ispu: number) {
+  return ispu > ISPU_TOP ? `${ISPU_TOP}+` : String(ispu)
+}
+
 export function useAir(enabled = true) {
   return useEnvelope<AirStation[]>({ key: 'air', path: '/api/air', enabled, staleMs: 15 * 60_000, pollMs: 15 * 60_000 })
 }
@@ -54,7 +60,8 @@ function AirLayer() {
             id: s.id,
             cat: s.category,
             ispu: s.ispu,
-            title: `${s.city}, ISPU ${s.ispu} ${airCategories[s.category].en.toLowerCase()}`,
+            label: ispuLabel(s.ispu),
+            title: `${s.city}, ISPU ${ispuLabel(s.ispu)} ${airCategories[s.category].en.toLowerCase()}`,
           },
         })),
       },
@@ -72,8 +79,8 @@ function AirLayer() {
           'circle-radius': ['interpolate', ['linear'], ['zoom'], 4, 6, 9, 13],
           'circle-color': color,
           'circle-opacity': 0.9,
-          'circle-stroke-color': palette.halo,
-          'circle-stroke-width': 1.5,
+          'circle-stroke-color': cssVar('--ink'),
+          'circle-stroke-width': 2,
         },
       },
       {
@@ -81,7 +88,7 @@ function AirLayer() {
         type: 'symbol' as const,
         minzoom: 6,
         layout: {
-          'text-field': ['to-string', ['get', 'ispu']],
+          'text-field': ['get', 'label'],
           'text-font': ['Noto Sans Bold'],
           'text-size': 11,
           'text-offset': [0, 1.4],
@@ -122,14 +129,15 @@ function AirDetail({ id }: { id: string }) {
   return (
     <>
       <DetailHeader layer="air" title={s.city} subtitle={`${formatWib(s.time)}, ${formatAgo(s.time)}`} />
-      <Lead value={s.ispu} unit="ISPU" label={`${cat.en}, ${cat.id}`} />
+      <Lead value={ispuLabel(s.ispu)} unit="ISPU" label={`${cat.en}, ${cat.id}`} />
       <p className={styles.text}>{cat.advice}</p>
       <Facts
         rows={[
           ['Station', s.address],
           ['Province', s.province],
-          ['Nearest other station', near ? `${near.o.city}, ISPU ${near.o.ispu}, ${Math.round(near.km)} km away` : undefined],
-          ['Scale', '0 to 50 good, 51 to 100 moderate, 101 to 200 unhealthy, 201 to 300 very unhealthy, above 300 hazardous'],
+          ['Raw reading', s.ispu > ISPU_TOP ? `${formatNumber(s.ispu)}, past the top of the ISPU scale at ${ISPU_TOP}. Treat it as hazardous, the exact number may be a sensor or calculation artefact.` : undefined],
+          ['Nearest other station', near ? `${near.o.city}, ISPU ${ispuLabel(near.o.ispu)}, ${Math.round(near.km)} km away` : undefined],
+          ['Scale', '0 to 50 good, 51 to 100 moderate, 101 to 200 unhealthy, 201 to 300 very unhealthy, 301 to 500 hazardous'],
           ['Location', <span className="num">{formatCoord(s.lat, s.lon)}</span>],
         ]}
       />
