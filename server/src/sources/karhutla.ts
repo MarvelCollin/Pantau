@@ -1,4 +1,6 @@
+import { cached } from '../lib/cache.js'
 import { fetchJson, round, UpstreamError } from '../lib/http.js'
+import { loadVolcanoes, type Volcano } from './volcanoes.js'
 
 export const SIPONGI_API = 'https://opsroom.sipongidata.my.id/api'
 
@@ -14,11 +16,20 @@ export type KarhutlaHotspot = [
   time: number,
   place: number,
   detections: number,
+  volcano?: string,
 ]
+
+export interface NearVolcano {
+  name: string
+  level: number
+  lat: number
+  lon: number
+}
 
 export interface Karhutla {
   places: Place[]
   hotspots: KarhutlaHotspot[]
+  volcanoes: Record<string, NearVolcano>
 }
 
 interface SipongiHotspot {
@@ -47,13 +58,33 @@ function hotspotUrl(): string {
 
 const clean = (value: string | null | undefined) => (value ?? '').trim()
 
+const VOLCANO_KM = 4
+
+async function activeVolcanoes(): Promise<Volcano[]> {
+  try {
+    const { entry } = await cached('volcanoes', { ttl: 1800, swr: 3600, sie: 86400 }, loadVolcanoes)
+    return entry.value.filter((v) => v.level >= 2)
+  } catch {
+    return []
+  }
+}
+
+function nearVolcano(lat: number, lon: number, volcanoes: Volcano[]): Volcano | undefined {
+  const cos = Math.cos((lat * Math.PI) / 180)
+  return volcanoes.find((v) => Math.hypot((v.lat - lat) * 111, (v.lon - lon) * 111 * cos) <= VOLCANO_KM)
+}
+
 export async function loadKarhutla(): Promise<Karhutla> {
-  const body = await fetchJson<{ features?: SipongiHotspot[] }>('SiPongi', hotspotUrl(), { timeoutMs: 20000 })
+  const [body, volcanoes] = await Promise.all([
+    fetchJson<{ features?: SipongiHotspot[] }>('SiPongi', hotspotUrl(), { timeoutMs: 20000 }),
+    activeVolcanoes(),
+  ])
   if (!Array.isArray(body.features)) throw new UpstreamError('SiPongi', 502)
 
   const places: Place[] = []
   const placeIndex = new Map<string, number>()
   const hotspots: KarhutlaHotspot[] = []
+  const near: Record<string, NearVolcano> = {}
 
   for (const f of body.features) {
     const p = f.properties
@@ -72,7 +103,7 @@ export async function loadKarhutla(): Promise<Karhutla> {
       placeIndex.set(key, index)
     }
 
-    hotspots.push([
+    const hotspot: KarhutlaHotspot = [
       round(lat, 3),
       round(lon, 3),
       confidences[p.confidence_level ?? ''] ?? 'm',
@@ -80,9 +111,15 @@ export async function loadKarhutla(): Promise<Karhutla> {
       Math.round(time / 1000),
       index,
       Math.max(1, Number(p.counter) || 1),
-    ])
+    ]
+    const volcano = nearVolcano(lat, lon, volcanoes)
+    if (volcano) {
+      hotspot.push(volcano.code)
+      near[volcano.code] = { name: volcano.name, level: volcano.level, lat: volcano.lat, lon: volcano.lon }
+    }
+    hotspots.push(hotspot)
   }
 
   hotspots.sort((a, b) => b[4] - a[4])
-  return { places, hotspots }
+  return { places, hotspots, volcanoes: near }
 }

@@ -10,6 +10,8 @@ import { cssVar } from '../theme'
 import { useLayerStatus } from './useLayerStatus'
 import { useEnvelope } from './useStaticLayer'
 import { DetailHeader, ExternalLink, Facts, Gone, Lead, Section } from '../ui/Detail'
+import styles from '../ui/Detail.module.css'
+import { distanceKm } from './trails'
 
 export type Place = [village: string, district: string, regency: string, province: string]
 
@@ -21,11 +23,20 @@ export type KarhutlaHotspot = [
   time: number,
   place: number,
   detections: number,
+  volcano?: string,
 ]
+
+export interface NearVolcano {
+  name: string
+  level: number
+  lat: number
+  lon: number
+}
 
 export interface Karhutla {
   places: Place[]
   hotspots: KarhutlaHotspot[]
+  volcanoes?: Record<string, NearVolcano>
 }
 
 export const confidenceNames = { l: 'Low', m: 'Medium', h: 'High' }
@@ -42,10 +53,14 @@ export function useKarhutla(enabled = true) {
   return useEnvelope<Karhutla>({ key: 'karhutla', path: '/api/karhutla', enabled, staleMs: 15 * 60_000, pollMs: 15 * 60_000 })
 }
 
+export function isVolcanic(h: KarhutlaHotspot) {
+  return Boolean(h[7])
+}
+
 export function provinceTotals(data: Karhutla, confidence?: KarhutlaHotspot[2]) {
   const totals = new Map<string, { province: string; count: number; lat: number; lon: number }>()
   for (const h of data.hotspots) {
-    if (confidence && h[2] !== confidence) continue
+    if (isVolcanic(h) || (confidence && h[2] !== confidence)) continue
     const province = data.places[h[5]]?.[3] || 'Unknown province'
     const row = totals.get(province) ?? { province, count: 0, lat: 0, lon: 0 }
     row.count++
@@ -75,14 +90,17 @@ function KarhutlaLayer() {
         type: 'FeatureCollection',
         features: payload.hotspots.map((h) => {
           const place = payload.places[h[5]]
+          const volcano = h[7] ? payload.volcanoes?.[h[7]] : undefined
           return {
             type: 'Feature',
             geometry: { type: 'Point', coordinates: [h[1], h[0]] },
             properties: {
               id: hotspotId(h),
-              conf: h[2],
-              rank: h[2] === 'h' ? 2 : h[2] === 'm' ? 1 : 0,
-              title: `Hotspot in ${placeLabel(place)}${place?.[2] ? `, ${place[2]}` : ''}, ${confidenceNames[h[2]].toLowerCase()} confidence`,
+              conf: volcano ? 'v' : h[2],
+              rank: volcano ? -1 : h[2] === 'h' ? 2 : h[2] === 'm' ? 1 : 0,
+              title: volcano
+                ? `Heat on ${volcano.name}, likely volcanic, not a forest fire`
+                : `Hotspot in ${placeLabel(place)}${place?.[2] ? `, ${place[2]}` : ''}, ${confidenceNames[h[2]].toLowerCase()} confidence`,
             },
           }
         }),
@@ -91,7 +109,7 @@ function KarhutlaLayer() {
   )
 
   const specs = useMemo(() => {
-    const color = ['match', ['get', 'conf'], 'h', cssVar('--lvl-4'), 'm', cssVar('--lvl-3'), cssVar('--lvl-2')]
+    const color = ['match', ['get', 'conf'], 'h', cssVar('--lvl-4'), 'm', cssVar('--lvl-3'), 'v', cssVar('--muted'), cssVar('--lvl-2')]
     return [
       {
         id: 'karhutla-glow',
@@ -112,7 +130,7 @@ function KarhutlaLayer() {
         paint: {
           'circle-radius': ['interpolate', ['linear'], ['zoom'], 3, ['match', ['get', 'conf'], 'h', 3, 'm', 2.2, 1.6], 9, ['match', ['get', 'conf'], 'h', 8, 'm', 6, 5]],
           'circle-color': color,
-          'circle-opacity': 0.9,
+          'circle-opacity': ['match', ['get', 'conf'], 'v', 0.6, 0.9],
           'circle-stroke-color': palette.halo,
           'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], 3, 0.5, 9, 1.5],
         },
@@ -142,9 +160,10 @@ function KarhutlaLayer() {
     return () => clearInterval(timer)
   }, [map, on])
 
-  const high = useMemo(() => payload?.hotspots.filter((h) => h[2] === 'h').length, [payload])
+  const fires = useMemo(() => payload?.hotspots.filter((h) => !isVolcanic(h)), [payload])
+  const high = useMemo(() => fires?.filter((h) => h[2] === 'h').length, [fires])
   useLayerStatus('karhutla', on, query, {
-    count: payload?.hotspots.length,
+    count: fires?.length,
     note: high !== undefined ? `in 24 hours, ${formatNumber(high)} high confidence` : 'in 24 hours',
     staleAfterMs: 2 * 3600_000,
   })
@@ -155,17 +174,29 @@ function KarhutlaDetail({ id }: { id: string }) {
   const { data } = useKarhutla()
   const payload = data?.items
   const h = payload?.hotspots.find((i) => hotspotId(i) === id)
-  if (!payload || !h) return <Gone layer="karhutla" />
+  if (!payload || !h) return <Gone layer="karhutla" loading={!payload} />
   const place = payload.places[h[5]]
   const time = h[4] * 1000
   const regency = place?.[2]
-  const inRegency = regency ? payload.hotspots.filter((o) => payload.places[o[5]]?.[2] === regency) : []
+  const province = place?.[3]
+  const inRegency = regency ? payload.hotspots.filter((o) => !isVolcanic(o) && payload.places[o[5]]?.[2] === regency && payload.places[o[5]]?.[3] === province) : []
   const highInRegency = inRegency.filter((o) => o[2] === 'h').length
+  const volcano = h[7] ? payload.volcanoes?.[h[7]] : undefined
+  const volcanoKm = volcano ? distanceKm([h[1], h[0]], [volcano.lon, volcano.lat]) : 0
 
   return (
     <>
-      <DetailHeader layer="karhutla" title={`Hotspot in ${placeLabel(place)}`} subtitle={`${formatWib(time)}, ${formatAgo(time)}`} />
-      {regency && (
+      <DetailHeader
+        layer="karhutla"
+        title={volcano ? `Heat on ${volcano.name}` : `Hotspot in ${placeLabel(place)}`}
+        subtitle={`${formatWib(time)}, ${formatAgo(time)}`}
+      />
+      {volcano && (
+        <p className={styles.note}>
+          {`This spot is ${volcanoKm < 1 ? 'less than 1' : formatNumber(Math.round(volcanoKm))} km from the summit of ${volcano.name}, which is at alert level ${['I', 'II', 'III', 'IV'][volcano.level - 1]}. The heat is most likely lava or the crater, not a forest or land fire, so it is left out of the karhutla counts.`}
+        </p>
+      )}
+      {regency && !volcano && (
         <Lead
           value={formatNumber(inRegency.length)}
           unit="hotspots"

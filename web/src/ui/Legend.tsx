@@ -70,6 +70,7 @@ const legends: Partial<Record<LayerId, Item[]>> = {
     { shape: 'circle', color: 'var(--lvl-2)', label: 'Low', size: 8 },
     { shape: 'circle', color: 'var(--lvl-3)', label: 'Medium', size: 10 },
     { shape: 'circle', color: 'var(--lvl-4)', label: 'High confidence', size: 12 },
+    { shape: 'circle', color: 'var(--muted)', label: 'Volcano heat', size: 8, faded: true },
   ],
   smoke: [
     { shape: 'circle', color: 'var(--lvl-4)', label: 'Fire cluster' },

@@ -51,7 +51,7 @@ interface Cluster {
 function clusters(data: Awaited<ReturnType<typeof loadKarhutla>>): Cluster[] {
   const bins = new Map<string, Cluster>()
   for (const h of data.hotspots) {
-    if (h[2] === 'l') continue
+    if (h[2] === 'l' || h[7]) continue
     const key = `${Math.floor(h[0] / BIN) * BIN},${Math.floor(h[1] / BIN) * BIN}`
     const c = bins.get(key) ?? { key, lat: 0, lon: 0, count: 0, high: 0, regencies: new Map() }
     c.lat += h[0]
