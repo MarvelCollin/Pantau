@@ -128,7 +128,7 @@ export function CameraPlayer({
         )}
       </div>
       <figcaption className={styles.caption}>
-        {stream?.kind === 'image' ? 'Snapshot, refreshed every minute' : stream?.kind ? 'Live stream, muted' : 'Finding the stream'}
+        {failed ? 'No picture right now' : stream?.kind === 'image' ? 'Snapshot, refreshed every minute' : stream?.kind ? 'Live stream, muted' : 'Finding the stream'}
       </figcaption>
     </figure>
   )
