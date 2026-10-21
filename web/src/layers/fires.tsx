@@ -1,4 +1,6 @@
 import { useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { getJson } from '../lib/api'
 import type { FeatureCollection } from 'geojson'
 import { formatAgo, formatCoord, formatWib } from '../lib/format'
 import { useLayerOn } from '../state/store'
@@ -73,9 +75,22 @@ function FiresLayer() {
   return null
 }
 
+interface FirePlace {
+  city?: string
+  locality?: string
+  principalSubdivision?: string
+  countryName?: string
+}
+
 function FireDetail({ id }: { id: string }) {
   const { data } = useFires()
   const f = data?.items.find((i) => fireId(i) === id)
+  const place = useQuery({
+    queryKey: ['place', f?.[0], f?.[1]],
+    queryFn: ({ signal }) => getJson<FirePlace>(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${f![0]}&longitude=${f![1]}&localityLanguage=en`, signal),
+    enabled: !!f,
+    staleTime: 24 * 3600_000,
+  })
   if (!f) return <Gone layer="fires" loading={!data} />
   const time = f[4] * 1000
   const here: [number, number] = [f[1], f[0]]
@@ -83,15 +98,19 @@ function FireDetail({ id }: { id: string }) {
   const nearest = towns
     .map(([name, region, lon, lat]) => ({ name, region, km: distanceKm([lon, lat], here) }))
     .sort((a, b) => a.km - b.km)[0]
+  const p = place.data
+  const where = p ? [p.city || p.locality, p.principalSubdivision, p.countryName].filter(Boolean).join(', ') : undefined
+  const abroad = p?.countryName && p.countryName !== 'Indonesia' ? p.countryName : undefined
 
   return (
     <>
-      <DetailHeader layer="fires" title="Fire hotspot" subtitle={`${formatWib(time)}, ${formatAgo(time)}`} />
+      <DetailHeader layer="fires" title={abroad ? `Fire hotspot in ${abroad}` : 'Fire hotspot'} subtitle={`${formatWib(time)}, ${formatAgo(time)}`} />
       <Lead value={f[2]} unit="MW" label="Fire radiative power, a rough measure of how intense the fire is" />
       <Facts
         rows={[
           ['Hotspots within 10 km', `${cluster.length} in the last 24 hours, ${Math.round(cluster.reduce((s, o) => s + o[2], 0))} MW in total`],
-          ['Nearest big city', `${nearest.name}, ${Math.round(nearest.km)} km away`],
+          ['Place', where],
+          ['Nearest town', `${nearest.name}, ${nearest.region}, ${Math.round(nearest.km)} km away`],
           ['Confidence', confidence[f[3]]],
           ['Pass', f[5] ? 'Night' : 'Day'],
           ['Satellite', 'Suomi NPP, VIIRS'],

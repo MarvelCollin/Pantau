@@ -65,6 +65,12 @@ export const towns: [name: string, region: string, lon: number, lat: number][] =
   ['Kuching', 'Sarawak, Malaysia', 110.35, 1.55],
   ['Singapore', 'Singapore', 103.82, 1.35],
   ['Kuala Lumpur', 'Malaysia', 101.69, 3.14],
+  ['Sibu', 'Sarawak, Malaysia', 111.82, 2.29],
+  ['Kota Kinabalu', 'Sabah, Malaysia', 116.07, 5.98],
+  ['Tawau', 'Sabah, Malaysia', 117.89, 4.24],
+  ['Dili', 'Timor-Leste', 125.57, -8.56],
+  ['Daru', 'Papua New Guinea', 143.21, -9.07],
+  ['Kiunga', 'Papua New Guinea', 141.29, -6.12],
 ]
 
 const neighbours: [string, number, number][] = [
