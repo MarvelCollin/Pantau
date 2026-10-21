@@ -32,6 +32,14 @@
   background: linear-gradient(90deg, #9fe0f5 0%, #3aa0e8 35%, #1a5fc4 60%, #f6d34d 80%, #e2453c 100%);
 }
 
+.scaleSatellite {
+  background: linear-gradient(90deg, #3fae5a 0%, #b7d84a 35%, #f6d34d 60%, #f08a3c 80%, #d7303c 100%);
+}
+
+.scaleTitle {
+  width: 100%;
+}
+
 .scaleLabels {
   display: flex;
   justify-content: space-between;

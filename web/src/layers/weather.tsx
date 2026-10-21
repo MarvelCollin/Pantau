@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import type { RasterSourceSpecification } from 'maplibre-gl'
 import { Pause, Play } from '@phosphor-icons/react'
 import { getJson } from '../lib/api'
-import { formatClock, formatCoord } from '../lib/format'
+import { formatAgo, formatClock, formatCoord } from '../lib/format'
 import { useLayerOn } from '../state/store'
 import { useMap, firstLabelLayer } from '../map/context'
 import { useLayerStatus } from './useLayerStatus'
@@ -16,6 +16,12 @@ interface RadarIndex {
 }
 
 const FRAME_MS = 700
+const DAY_MS = 86_400_000
+const HALF_HOUR_MS = 30 * 60_000
+const GIBS = 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best'
+const IMERG = 'IMERG_Precipitation_Rate_30min'
+const IMERG_MATRIX = 'GoogleMapsCompatible_Level6'
+const SATELLITE_ID = 'rain-satellite'
 
 function useRadarIndex(enabled: boolean) {
   return useQuery({
@@ -30,6 +36,57 @@ function useRadarIndex(enabled: boolean) {
   })
 }
 
+function utcDay(time: number) {
+  return new Date(time).toISOString().slice(0, 10)
+}
+
+function imergStamp(time: number) {
+  return new Date(time).toISOString().slice(0, 19) + 'Z'
+}
+
+function imergTile(stamp: string, z: string, y: string, x: string) {
+  return `${GIBS}/${IMERG}/default/${stamp}/${IMERG_MATRIX}/${z}/${y}/${x}.png`
+}
+
+async function latestImerg(signal: AbortSignal): Promise<number | null> {
+  const now = Date.now()
+  const res = await fetch(`${GIBS}/1.0.0/${IMERG}/default/${IMERG_MATRIX}/all/${utcDay(now - 3 * DAY_MS)}--${utcDay(now + 2 * DAY_MS)}.xml`, { signal })
+  if (!res.ok) throw new Error('http_' + res.status)
+  const domain = /<Domain>([^<]*)<\/Domain>/.exec(await res.text())?.[1].trim()
+  if (!domain) return null
+  const range = domain.split(',').at(-1)!.split('/')
+  const latest = Date.parse(range[1] ?? range[0])
+  if (!Number.isFinite(latest)) return null
+  for (let step = 0; step < 8; step++) {
+    const time = latest - step * HALF_HOUR_MS
+    if (time > now) continue
+    if (await imergReady(time, signal)) return time
+  }
+  return null
+}
+
+async function imergReady(time: number, signal: AbortSignal) {
+  const tile = imergTile(imergStamp(time), '3', '4', '6')
+  const probes = await Promise.all(
+    [0, 1, 2].map((i) =>
+      fetch(`${tile}?probe=${Date.now()}-${i}`, { signal })
+        .then((res) => res.ok)
+        .catch(() => false),
+    ),
+  )
+  return probes.every(Boolean)
+}
+
+function useSatelliteRain(enabled: boolean) {
+  return useQuery({
+    queryKey: ['radar-satellite'],
+    queryFn: async ({ signal }) => ({ time: await latestImerg(signal) }),
+    enabled,
+    staleTime: 15 * 60_000,
+    refetchInterval: 15 * 60_000,
+  })
+}
+
 function frameId(i: number) {
   return `radar-${i}`
 }
@@ -38,6 +95,9 @@ function WeatherLayer() {
   const on = useLayerOn('weather')
   const map = useMap()
   const query = useRadarIndex(on)
+  const satellite = useSatelliteRain(on)
+  const satelliteTime = satellite.data?.time ?? null
+  const satelliteKey = satellite.data ? (satelliteTime ? imergStamp(satelliteTime) : 'default') : satellite.isError ? 'default' : undefined
   const frames = query.data?.index.radar.past ?? []
   const host = query.data?.index.host
   const [playing, setPlaying] = useState(false)
@@ -45,6 +105,32 @@ function WeatherLayer() {
   const last = frames.length - 1
   const current = frame < 0 || frame > last ? last : frame
   const framesKey = frames.map((f) => f.path).join(',')
+
+  useEffect(() => {
+    if (!map || !on || !satelliteKey) return
+    const source: RasterSourceSpecification = {
+      type: 'raster',
+      tiles: [imergTile(satelliteKey, '{z}', '{y}', '{x}')],
+      tileSize: 256,
+      maxzoom: 6,
+      attribution: '<a href="https://www.earthdata.nasa.gov/engage/open-data-services-software/earthdata-developer-portal/gibs-api" target="_blank" rel="noreferrer">NASA GIBS</a>, GPM IMERG',
+    }
+    map.addSource(SATELLITE_ID, source)
+    map.addLayer(
+      {
+        id: SATELLITE_ID,
+        type: 'raster',
+        source: SATELLITE_ID,
+        metadata: { pantau: 'weather' },
+        paint: { 'raster-opacity': 0.6, 'raster-fade-duration': 0 },
+      },
+      map.getLayer(frameId(0)) ? frameId(0) : firstLabelLayer(map),
+    )
+    return () => {
+      if (map.getLayer(SATELLITE_ID)) map.removeLayer(SATELLITE_ID)
+      if (map.getSource(SATELLITE_ID)) map.removeSource(SATELLITE_ID)
+    }
+  }, [map, on, satelliteKey])
 
   useEffect(() => {
     if (!map || !on || !host || frames.length === 0) return
@@ -101,30 +187,41 @@ function WeatherLayer() {
     }
   }, [on])
 
-  useLayerStatus('weather', on, query, { note: 'Latest radar', staleAfterMs: 30 * 60_000 })
+  const satelliteNote = satelliteTime ? `satellite estimate from ${formatClock(satelliteTime)} WIB` : 'satellite estimate'
+  useLayerStatus('weather', on, query, { note: `Latest radar, ${satelliteNote} elsewhere`, staleAfterMs: 30 * 60_000 })
 
-  if (!on || frames.length === 0) return null
-  const time = frames[current].time * 1000
+  if (!on || (frames.length === 0 && !satelliteKey)) return null
+  const time = frames.length > 0 ? frames[current].time * 1000 : 0
   return (
     <div className={styles.timeline} role="group" aria-label="Rain radar playback">
-      <button
-        type="button"
-        className={styles.play}
-        onClick={() => {
-          if (playing) {
-            setPlaying(false)
-            setFrame(-1)
-          } else setPlaying(true)
-        }}
-        aria-label={playing ? 'Stop radar loop and show latest' : 'Play the last two hours of radar'}
-      >
-        {playing ? <Pause size={16} weight="fill" aria-hidden="true" /> : <Play size={16} weight="fill" aria-hidden="true" />}
-      </button>
-      <span className={styles.time}>
-        <span className="num">{formatClock(time)} WIB</span>
-        <span className={styles.rel}>{current === last ? 'latest radar' : `${Math.round((frames[last].time * 1000 - time) / 60_000)} min earlier`}</span>
-      </span>
-      <span className={styles.credit}>RainViewer</span>
+      {frames.length > 0 && (
+        <>
+          <button
+            type="button"
+            className={styles.play}
+            onClick={() => {
+              if (playing) {
+                setPlaying(false)
+                setFrame(-1)
+              } else setPlaying(true)
+            }}
+            aria-label={playing ? 'Stop radar loop and show latest' : 'Play the last two hours of radar'}
+          >
+            {playing ? <Pause size={16} weight="fill" aria-hidden="true" /> : <Play size={16} weight="fill" aria-hidden="true" />}
+          </button>
+          <span className={styles.time}>
+            <span className="num">{formatClock(time)} WIB</span>
+            <span className={styles.rel}>{current === last ? 'latest radar' : `${Math.round((frames[last].time * 1000 - time) / 60_000)} min earlier`}</span>
+          </span>
+        </>
+      )}
+      {satelliteKey && (
+        <span className={styles.satellite}>
+          <span>{satelliteTime ? <>Satellite rain estimate from <span className="num">{formatClock(satelliteTime)} WIB</span></> : 'Satellite rain estimate'}</span>
+          <span className={styles.rel}>{satelliteTime ? `Where radar is missing, ${formatAgo(satelliteTime)}` : 'Where radar is missing'}</span>
+        </span>
+      )}
+      <span className={styles.credit}>RainViewer, NASA GPM</span>
     </div>
   )
 }

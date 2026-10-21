@@ -33,7 +33,11 @@ export const references: Record<LayerId | 'point' | 'basemap', Reference[]> = {
   ],
   firecrews: [{ name: 'SiPongi+, Ministry of Forestry', what: 'Manggala Agni posts, firefighting and ground check reports', url: 'https://sipongi.gakkum.kehutanan.go.id/hard-manggala-agni' }],
   reports: [{ name: 'PetaBencana', what: 'Citizen disaster reports', url: 'https://docs.petabencana.id' }],
-  weather: [{ name: 'RainViewer', what: 'Rain radar tiles', url: 'https://www.rainviewer.com/api.html' }],
+  weather: [
+    { name: 'RainViewer', what: 'Rain radar tiles', url: 'https://www.rainviewer.com/api.html' },
+    { name: 'NASA GPM IMERG Early', what: 'Satellite rain estimate, 30 minute, a few hours behind', url: 'https://gpm.nasa.gov/data/imerg' },
+    { name: 'NASA GIBS', what: 'Satellite rain estimate tiles', url: 'https://www.earthdata.nasa.gov/engage/open-data-services-software/earthdata-developer-portal/gibs-api' },
+  ],
   air: [{ name: 'SiPongi+ AQMS, Ministry of Environment and Forestry', what: 'Hourly ISPU from air quality stations', url: 'https://sipongi.gakkum.kehutanan.go.id' }],
   cameras: [
     { name: 'Jogja City ATCS', what: 'Yogyakarta city cameras', url: 'https://cctv.jogjakota.go.id' },

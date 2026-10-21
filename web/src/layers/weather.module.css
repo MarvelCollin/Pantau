@@ -43,6 +43,18 @@
   font-size: var(--text-xs);
 }
 
+.satellite {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.time + .satellite {
+  padding-left: var(--space-3);
+  border-left: 1px solid var(--hairline);
+}
+
 .credit {
   color: var(--muted);
   font-size: var(--text-xs);
@@ -97,5 +109,19 @@
 @media (max-width: 900px) {
   .timeline {
     bottom: var(--space-3);
+  }
+}
+
+@media (max-width: 600px) {
+  .timeline {
+    max-width: calc(100vw - 2 * var(--space-3));
+  }
+
+  .satellite {
+    white-space: normal;
+  }
+
+  .credit {
+    display: none;
   }
 }

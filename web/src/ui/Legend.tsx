@@ -104,7 +104,10 @@ export function Legend({ id, label }: { id: LayerId; label: string }): ReactNode
   if (id === 'weather') {
     return (
       <div className={styles.legend} aria-label={`${label} key`}>
+        <span className={styles.scaleTitle}>Radar</span>
         <span className={styles.scale} aria-hidden="true" />
+        <span className={styles.scaleTitle}>Satellite estimate</span>
+        <span className={`${styles.scale} ${styles.scaleSatellite}`} aria-hidden="true" />
         <span className={styles.scaleLabels}>
           <span>Light rain</span>
           <span>Heavy rain</span>
