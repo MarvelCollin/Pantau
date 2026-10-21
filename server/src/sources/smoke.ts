@@ -128,7 +128,35 @@ async function forecast(source: string, base: string, vars: string, points: [num
 
 type Field = Map<string, { u: number[]; v: number[] }>
 
-function windAt(field: Field, lat: number, lon: number, hour: number): [number, number] | undefined {
+interface Local {
+  lat: number
+  lon: number
+  u: number[]
+  v: number[]
+}
+
+const LOCAL_REACH = 0.75
+const LOCAL_WEIGHT = 3
+
+function windAt(field: Field, locals: Local[], lat: number, lon: number, hour: number): [number, number] | undefined {
+  const grid = gridWind(field, lat, lon, hour)
+  let u = grid ? grid[0] : 0
+  let v = grid ? grid[1] : 0
+  let w = grid ? 1 : 0
+  for (const l of locals) {
+    const d = Math.hypot(l.lat - lat, l.lon - lon)
+    const lu = l.u[hour]
+    const lv = l.v[hour]
+    if (d >= LOCAL_REACH || !Number.isFinite(lu) || !Number.isFinite(lv)) continue
+    const weight = LOCAL_WEIGHT * (1 - d / LOCAL_REACH) ** 2
+    u += lu * weight
+    v += lv * weight
+    w += weight
+  }
+  return w > 0 ? [u / w, v / w] : undefined
+}
+
+function gridWind(field: Field, lat: number, lon: number, hour: number): [number, number] | undefined {
   const lat0 = Math.floor(lat)
   const lon0 = Math.floor(lon)
   let u = 0
@@ -158,11 +186,11 @@ function components(speed: number | null | undefined, from: number | null | unde
   return [-speed * Math.sin(rad), -speed * Math.cos(rad)]
 }
 
-function trace(field: Field, lat: number, lon: number): { path: [number, number][]; meanSpeed: number } {
+function trace(field: Field, locals: Local[], lat: number, lon: number): { path: [number, number][]; meanSpeed: number } {
   const path: [number, number][] = [[round(lon, 3), round(lat, 3)]]
   let speedSum = 0
   for (let hour = 0; hour < HOURS; hour++) {
-    const wind = windAt(field, lat, lon, hour)
+    const wind = windAt(field, locals, lat, lon, hour)
     if (!wind) break
     const [u, v] = wind
     speedSum += Math.hypot(u, v)
@@ -180,9 +208,11 @@ export async function loadSmoke(): Promise<Smoke> {
   if (sources.length === 0) return { start: Math.floor(Date.now() / 3600_000) * 3600, pmStepHours: PM_STEP, cells: [], plumes: [] }
 
   const points = gridAround(sources)
-  const [winds, air] = await Promise.all([
+  const sourcePoints: [number, number][] = sources.map((s) => [round(s.lat, 2), round(s.lon, 2)])
+  const [winds, air, sourceWinds] = await Promise.all([
     forecast('Open-Meteo', 'https://api.open-meteo.com/v1/forecast', 'wind_speed_10m,wind_direction_10m,wind_speed_925hPa,wind_direction_925hPa', points),
     forecast('Open-Meteo Air Quality', 'https://air-quality-api.open-meteo.com/v1/air-quality', 'pm2_5', points).catch(() => undefined),
+    forecast('Open-Meteo', 'https://api.open-meteo.com/v1/forecast', 'wind_speed_925hPa,wind_direction_925hPa', sourcePoints).catch(() => undefined),
   ])
 
   const start = winds[0]?.hourly.time[0]
@@ -208,8 +238,19 @@ export async function loadSmoke(): Promise<Smoke> {
     cells.push([lat, lon, round(h.wind_speed_10m?.[0] ?? 0, 1), Math.round(h.wind_direction_10m?.[0] ?? 0), ...pmSteps])
   })
 
+  const locals: Local[] = (sourceWinds ?? []).map((f, i) => {
+    const u: number[] = []
+    const v: number[] = []
+    for (let t = 0; t <= HOURS; t++) {
+      const [cu, cv] = components(f.hourly.wind_speed_925hPa?.[t], f.hourly.wind_direction_925hPa?.[t])
+      u.push(cu)
+      v.push(cv)
+    }
+    return { lat: sourcePoints[i][0], lon: sourcePoints[i][1], u, v }
+  })
+
   const plumes: SmokePlume[] = sources.map((s) => {
-    const { path, meanSpeed } = trace(field, s.lat, s.lon)
+    const { path, meanSpeed } = trace(field, locals, s.lat, s.lon)
     const [regency, info] = [...s.regencies.entries()].sort((a, b) => b[1].count - a[1].count)[0] ?? ['', { province: '' }]
     return {
       id: s.key,
