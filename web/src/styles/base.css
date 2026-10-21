@@ -124,7 +124,8 @@ a {
   color: var(--muted);
 }
 
-.maplibregl-ctrl-attrib a {
+.maplibregl-map .maplibregl-ctrl-attrib a,
+.maplibregl-map .maplibregl-ctrl-attrib a:hover {
   color: var(--muted);
 }
 
