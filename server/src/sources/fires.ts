@@ -4,6 +4,7 @@ export type Fire = [lat: number, lon: number, frp: number, confidence: 'l' | 'n'
 
 const URL = 'https://firms.modaps.eosdis.nasa.gov/data/active_fire/suomi-npp-viirs-c2/csv/SUOMI_VIIRS_C2_SouthEast_Asia_24h.csv'
 const BOX = { south: -12, north: 8, west: 94, east: 142 }
+const WINDOW_S = 24 * 3600
 
 export async function loadFires(): Promise<Fire[]> {
   const csv = await fetchText('NASA FIRMS', URL, { timeoutMs: 15000 })
@@ -38,5 +39,6 @@ export async function loadFires(): Promise<Fire[]> {
       row[iDn]?.trim() === 'N' ? 1 : 0,
     ])
   }
-  return out
+  const latest = out.reduce((max, f) => Math.max(max, f[4]), 0)
+  return out.filter((f) => f[4] > latest - WINDOW_S)
 }
