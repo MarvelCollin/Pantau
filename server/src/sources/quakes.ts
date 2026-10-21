@@ -39,6 +39,54 @@ interface UsgsFeed {
 }
 
 const BMKG = 'https://data.bmkg.go.id/DataMKG/TEWS/'
+const REGION = { south: -20, north: 15, west: 85, east: 155 }
+
+const directions: Record<string, string> = {
+  utara: 'north',
+  selatan: 'south',
+  barat: 'west',
+  timur: 'east',
+  baratlaut: 'north-west',
+  baratdaya: 'south-west',
+  timurlaut: 'north-east',
+  tenggara: 'south-east',
+}
+
+const keepUpper = new Set(['NTT', 'NTB', 'DIY', 'DKI'])
+
+function placeName(raw: string): string {
+  return raw
+    .replace(/^KAB-/, 'KAB. ')
+    .split('-')
+    .map((part) =>
+      keepUpper.has(part)
+        ? part
+        : part
+            .toLowerCase()
+            .replace(/^kep\./, 'kep. ')
+            .replace(/(^|[\s.])(\p{L})/gu, (_, lead: string, ch: string) => lead + ch.toUpperCase()),
+    )
+    .join(', ')
+}
+
+function englishPlace(wilayah: string): string {
+  const text = wilayah.trim()
+  const m = /^(?:pusat gempa berada di (laut|darat) )?(\d+(?:[.,]\d+)?)\s*km\s+(barat\s*laut|barat\s*daya|timur\s*laut|tenggara|utara|selatan|barat|timur)\s+(.+)$/i.exec(text)
+  if (!m) return text
+  const where = m[1] ? (m[1].toLowerCase() === 'laut' ? 'At sea, ' : 'On land, ') : ''
+  const direction = directions[m[3].toLowerCase().replace(/\s+/g, '')]
+  const place = /^[A-Z0-9.\s-]+$/.test(m[4]) ? placeName(m[4]) : m[4]
+  return `${where}${m[2]} km ${direction} of ${place}`
+}
+
+function englishTsunami(potensi?: string): string | undefined {
+  if (!potensi) return undefined
+  const t = potensi.trim().toLowerCase()
+  if (t.startsWith('tidak berpotensi tsunami')) return 'No tsunami threat'
+  if (t.startsWith('berpotensi tsunami')) return 'Tsunami possible, follow BMKG and local authorities'
+  if (t.startsWith('gempa ini dirasakan')) return 'Felt by people, shared by BMKG as information'
+  return potensi
+}
 
 function fromBmkg(q: BmkgQuake): Quake | null {
   const [lat, lon] = q.Coordinates.split(',').map(Number)
@@ -53,9 +101,9 @@ function fromBmkg(q: BmkgQuake): Quake | null {
     lon,
     mag,
     depthKm: Number.parseFloat(q.Kedalaman) || 0,
-    place: q.Wilayah,
+    place: englishPlace(q.Wilayah),
     felt: q.Dirasakan,
-    tsunami: q.Potensi,
+    tsunami: englishTsunami(q.Potensi),
     shakemap: q.Shakemap ? BMKG + q.Shakemap : undefined,
   }
 }
@@ -110,7 +158,9 @@ export async function loadQuakes(): Promise<Quake[]> {
       bmkg.set(q.id, { ...prev, ...q, felt: q.felt ?? prev?.felt, shakemap: q.shakemap ?? prev?.shakemap, tsunami: q.tsunami ?? prev?.tsunami })
     }
   }
-  const usgsList = results[3].status === 'fulfilled' ? results[3].value : []
+  const usgsList = (results[3].status === 'fulfilled' ? results[3].value : []).filter(
+    (u) => u.lat >= REGION.south && u.lat <= REGION.north && u.lon >= REGION.west && u.lon <= REGION.east,
+  )
   const local = [...bmkg.values()]
   const merged = [
     ...local,

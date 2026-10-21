@@ -127,7 +127,7 @@ function QuakeDetail({ id }: { id: string }) {
       <DetailHeader layer="quakes" title={q.place} subtitle={`${formatWib(q.time)}, ${formatAgo(q.time)}`} />
       <Lead value={q.mag.toFixed(1)} unit="magnitude" label={`Depth ${q.depthKm} km`} />
       {q.tsunami && (
-        <p className={styles.tsunami} data-risk={/berpotensi tsunami/i.test(q.tsunami) && !/tidak/i.test(q.tsunami)}>
+        <p className={styles.tsunami} data-risk={/tsunami possible/i.test(q.tsunami) || (/berpotensi tsunami/i.test(q.tsunami) && !/tidak/i.test(q.tsunami))}>
           {q.tsunami}
         </p>
       )}
