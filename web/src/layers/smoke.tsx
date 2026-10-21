@@ -100,7 +100,7 @@ export function describeSpot(plume: SmokePlume, hour: number) {
   const city = nearestCity(at)
   const moved = distanceKm(plume.path[0], at)
   if (moved < 5) return 'Still over the fires'
-  if (city && city.km <= 40) return `Over ${city.name}, ${formatNumber(Math.round(moved))} km away`
+  if (city && city.km <= 40) return `Over ${city.name}, ${formatNumber(Math.round(moved))} km from the fires`
   const way = compass(bearing(plume.path[0], at))
   return `${formatNumber(Math.round(moved))} km ${way}${city ? `, ${Math.round(city.km)} km from ${city.name}` : ''}`
 }
