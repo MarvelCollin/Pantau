@@ -11,7 +11,7 @@ import type { Camera } from '../layers/cameras'
 import type { Quake } from '../layers/quakes'
 import { routeLabel, type Flight, type RouteAirport } from '../layers/flights'
 import { useStore } from '../state/store'
-import { cities } from '../map/overview'
+import { towns } from '../map/overview'
 import type { AirportFilter } from '../state/store'
 import { LayerGlyph } from './LayerGlyph'
 import styles from './Search.module.css'
@@ -76,7 +76,7 @@ function useResults(text: string, scope: Scope): Result[] {
       return lower.split(/[^a-z0-9]+/).some((word) => word.startsWith(q))
     }
 
-    for (const [name, region, lon, lat] of cities)
+    for (const [name, region, lon, lat] of towns)
       if (has(name) || has(region)) out.push({ kind: 'places', key: `city-${name}`, label: name, hint: region, lon, lat, zoom: 10 })
     for (const v of envelopes<Volcano>(client, 'volcanoes'))
       if (has(v.name)) out.push({ kind: 'volcanoes', key: `v-${v.code}`, label: v.name, hint: `Volcano, level ${['I', 'II', 'III', 'IV'][v.level - 1]}, ${v.province}`, lon: v.lon, lat: v.lat, zoom: 10, layer: 'volcanoes', id: v.code })
