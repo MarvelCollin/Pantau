@@ -190,7 +190,7 @@ function useSmokeParticles(on: boolean, plumes: SmokePlume[] | undefined, color:
       source: 'smoke-flow',
       metadata: { pantau: 'smoke' },
       paint: {
-        'circle-radius': ['*', ['get', 's'], ['interpolate', ['linear'], ['zoom'], 4, 2.4, 9, 5]],
+        'circle-radius': ['interpolate', ['linear'], ['zoom'], 4, ['*', ['get', 's'], 2.4], 9, ['*', ['get', 's'], 5]],
         'circle-color': color,
         'circle-opacity': ['get', 'o'],
         'circle-blur': 0.5,

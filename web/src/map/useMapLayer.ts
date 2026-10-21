@@ -22,6 +22,16 @@ interface Options {
 
 const HOVER = ['boolean', ['feature-state', 'hover'], false]
 
+function hoverValue(base: unknown, hovered: number): unknown {
+  if (Array.isArray(base) && base[0] === 'interpolate' && Array.isArray(base[2]) && base[2][0] === 'zoom') {
+    return base.map((part, i) => (i > 3 && i % 2 === 0 ? ['case', HOVER, hovered, part] : part))
+  }
+  if (Array.isArray(base) && base[0] === 'step' && Array.isArray(base[1]) && base[1][0] === 'zoom') {
+    return base.map((part, i) => (i === 2 || (i > 2 && i % 2 === 0) ? ['case', HOVER, hovered, part] : part))
+  }
+  return ['case', HOVER, hovered, base]
+}
+
 function withHover<T extends LayerSpec>(layer: T, interactive: string[]): T {
   if (!interactive.includes(layer.id) || !('paint' in layer)) return layer
   const paint = { ...(layer.paint as Record<string, unknown>) }
@@ -31,7 +41,7 @@ function withHover<T extends LayerSpec>(layer: T, interactive: string[]): T {
   }
   if (layer.type === 'circle') {
     const base = paint['circle-stroke-width'] ?? 1
-    paint['circle-stroke-width'] = ['case', HOVER, 3.5, base]
+    paint['circle-stroke-width'] = hoverValue(base, 3.5)
   }
   return { ...layer, paint } as T
 }
