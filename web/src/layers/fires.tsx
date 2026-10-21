@@ -8,7 +8,7 @@ import { useLayerStatus } from './useLayerStatus'
 import { useEnvelope } from './useStaticLayer'
 import { DetailHeader, ExternalLink, Facts, Gone, Lead, Section } from '../ui/Detail'
 import { distanceKm } from './trails'
-import { cities } from '../map/overview'
+import { towns } from '../map/overview'
 
 export type Fire = [lat: number, lon: number, frp: number, confidence: 'l' | 'n' | 'h', time: number, night: 0 | 1]
 
@@ -80,7 +80,7 @@ function FireDetail({ id }: { id: string }) {
   const time = f[4] * 1000
   const here: [number, number] = [f[1], f[0]]
   const cluster = data!.items.filter((o) => Math.abs(o[0] - f[0]) < 0.1 && Math.abs(o[1] - f[1]) < 0.1 && distanceKm([o[1], o[0]], here) <= 10)
-  const nearest = cities
+  const nearest = towns
     .map(([name, region, lon, lat]) => ({ name, region, km: distanceKm([lon, lat], here) }))
     .sort((a, b) => a.km - b.km)[0]
 

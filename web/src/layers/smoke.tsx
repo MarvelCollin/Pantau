@@ -9,7 +9,7 @@ import { useMap } from '../map/context'
 import { usePalette } from '../map/usePalette'
 import { cssVar } from '../theme'
 import { prefersReducedMotion } from '../lib/motion'
-import { cities } from '../map/overview'
+import { towns } from '../map/overview'
 import { useLayerStatus } from './useLayerStatus'
 import { useEnvelope } from './useStaticLayer'
 import { distanceKm } from './trails'
@@ -82,7 +82,7 @@ function bearing(from: [number, number], to: [number, number]) {
 }
 
 export function nearestCity(at: [number, number]) {
-  return cities.map(([name, region, lon, lat]) => ({ name, region, km: distanceKm([lon, lat], at) })).sort((a, b) => a.km - b.km)[0]
+  return towns.map(([name, region, lon, lat]) => ({ name, region, km: distanceKm([lon, lat], at) })).sort((a, b) => a.km - b.km)[0]
 }
 
 export function positionAt(plume: SmokePlume, hour: number): [number, number] {
