@@ -72,6 +72,7 @@ function titleCase(value: string): string {
     .replace(/\s+/g, ' ')
     .trim()
     .replace(/(^|[\s/(-])(\p{L})/gu, (_, lead: string, ch: string) => lead + ch.toUpperCase())
+    .replace(/\b(Ikn|Dki|Oki|Pt|Rt|Rw|Tn|Khdtk)\b/g, (word) => word.toUpperCase())
 }
 
 function text(value: string | null | undefined): string | undefined {
@@ -90,7 +91,35 @@ function fixDate(raw: string | undefined, from: string, to: string): string | un
   const date = `${m[1]}-${m[2]}-${m[3]}`
   if (date >= from && date <= to) return date
   const swapped = `${m[1]}-${m[3]}-${m[2]}`
-  return Number(m[3]) <= 12 && swapped >= from && swapped <= to ? swapped : date
+  return Number(m[3]) <= 12 && swapped >= from && swapped <= to ? swapped : undefined
+}
+
+const MAX_POST_KM = 300
+const CHECK_SEA_KM = 40
+const elevations = new Map<string, number>()
+
+function distanceKm(a: [number, number], b: [number, number]): number {
+  const cos = Math.cos((a[0] * Math.PI) / 180)
+  return Math.hypot((a[0] - b[0]) * 111, (a[1] - b[1]) * 111 * cos)
+}
+
+async function seaPoints(points: [number, number][]): Promise<Set<string>> {
+  const key = (p: [number, number]) => `${p[0]},${p[1]}`
+  const missing = [...new Map(points.map((p) => [key(p), p])).values()].filter((p) => !elevations.has(key(p)))
+  for (let i = 0; i < missing.length; i += 100) {
+    const batch = missing.slice(i, i + 100)
+    try {
+      const url = `https://api.open-meteo.com/v1/elevation?latitude=${batch.map((p) => p[0]).join(',')}&longitude=${batch.map((p) => p[1]).join(',')}`
+      const body = await fetchJson<{ elevation?: number[] }>('Open-Meteo', url, { timeoutMs: 8000 })
+      batch.forEach((p, n) => {
+        const e = body.elevation?.[n]
+        if (typeof e === 'number') elevations.set(key(p), e)
+      })
+    } catch {
+      continue
+    }
+  }
+  return new Set(points.filter((p) => elevations.get(key(p)) === 0).map(key))
 }
 
 function point(f: Feature<unknown>): [number, number] | undefined {
@@ -169,6 +198,16 @@ export async function loadFireCrews(): Promise<FireCrews> {
   if (suppression.status === 'fulfilled') add('suppression', suppression.value)
   if (groundcheck.status === 'fulfilled') add('groundcheck', groundcheck.value)
 
-  reports.sort((a, b) => b.date.localeCompare(a.date))
-  return { posts, reports }
+  const postsByUnit = new Map<string, CrewPost[]>()
+  for (const p of posts) postsByUnit.set(p.unit, [...(postsByUnit.get(p.unit) ?? []), p])
+  const fromPost = (r: CrewReport) => {
+    const own = postsByUnit.get(r.unit)
+    return own ? Math.min(...own.map((p) => distanceKm([r.lat, r.lon], [p.lat, p.lon]))) : undefined
+  }
+  const nearPosts = reports.filter((r) => (fromPost(r) ?? 0) <= MAX_POST_KM)
+  const sea = await seaPoints(nearPosts.filter((r) => (fromPost(r) ?? CHECK_SEA_KM + 1) > CHECK_SEA_KM).map((r) => [r.lat, r.lon]))
+  const placed = nearPosts.filter((r) => !sea.has(`${r.lat},${r.lon}`))
+
+  placed.sort((a, b) => b.date.localeCompare(a.date))
+  return { posts, reports: placed }
 }

@@ -95,7 +95,7 @@ export async function loadKarhutla(): Promise<Karhutla> {
     const time = Date.parse(p.date_hotspot_ori ?? '')
     if (!satellite || !Number.isFinite(time)) continue
 
-    const place: Place = [clean(p.desa), clean(p.kecamatan), clean(p.kabkota), clean(p.nama_provinsi)]
+    const place: Place = [clean(p.desa), clean(p.kecamatan), clean(p.kabkota), clean(p.nama_provinsi).replace(/(Dki|Ikn|Di)/g, (word) => word.toUpperCase())]
     const key = place.join('|')
     let index = placeIndex.get(key)
     if (index === undefined) {
