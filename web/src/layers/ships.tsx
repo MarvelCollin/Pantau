@@ -152,9 +152,13 @@ function ShipDetail({ id }: { id: string }) {
   return (
     <>
       <DetailHeader layer="ships" title={s.name ?? `MMSI ${s.mmsi}`} subtitle={[typeName(s.shipType), s.callsign].filter(Boolean).join(', ') || 'Vessel'} />
-      <Lead value={s.sog !== undefined ? s.sog.toFixed(1) : 'Unknown'} unit={s.sog !== undefined ? 'knots' : undefined} label={s.status !== undefined ? statusNames[s.status] ?? 'Status not given' : 'Speed over ground'} />
+      {s.sog !== undefined && (
+        <Lead value={s.sog.toFixed(1)} unit="knots" label={s.status !== undefined ? statusNames[s.status] ?? 'Status not given' : 'Speed over ground'} />
+      )}
       <Facts
         rows={[
+          ['Speed', s.sog === undefined ? 'Not reported yet, only the name and destination have come in' : undefined],
+          ['Status', s.sog === undefined && s.status !== undefined ? statusNames[s.status] : undefined],
           ['Course', s.cog !== undefined ? <span className="num">{Math.round(s.cog)}°</span> : undefined],
           ['Destination', s.destination],
           ['MMSI', <span className="num">{s.mmsi}</span>],
