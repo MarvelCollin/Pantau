@@ -1,3 +1,4 @@
+import { waitUntil } from '@vercel/functions'
 import { cached } from '../lib/cache.js'
 import { fetchJson, fetchText, round, UpstreamError } from '../lib/http.js'
 
@@ -33,6 +34,10 @@ interface LtaResponse {
 
 const BINAMARGA =
   'https://gisportal.binamarga.pu.go.id/arcgis/rest/services/Hosted/cctv_jalnas_20260408/FeatureServer/0/query?where=1%3D1&outFields=code,ruas,kota,source,url_stream,status,lat,lon&returnGeometry=false&f=json'
+
+function safeUrl(value: string): string {
+  return value.includes('%') ? value : encodeURI(value)
+}
 
 function titleCase(value: string): string {
   return value.toLowerCase().replace(/\b([a-z])/g, (m) => m.toUpperCase())
@@ -95,6 +100,7 @@ async function jogja(): Promise<Camera[]> {
       timeoutMs: 12000,
       headers: { 'x-requested-with': 'XMLHttpRequest', referer: 'https://cctv.jogjakota.go.id/' },
     })
+    const seen = new Set<string>()
     return list
       .map((c) => ({
         id: `jg-${c.cctv_id}`,
@@ -105,48 +111,106 @@ async function jogja(): Promise<Camera[]> {
         lon: round(Number(c.cctv_longitude)),
         kind: 'hls' as const,
         online: c.cctv_status === '0' && c.cctv_link.startsWith('https://'),
-        stream: c.cctv_link,
+        stream: safeUrl(c.cctv_link.trim()),
         page: 'https://cctv.jogjakota.go.id/',
       }))
       .filter((c) => Number.isFinite(c.lat) && Number.isFinite(c.lon) && c.lat !== 0)
+      .filter((c) => {
+        const keys = [`stream:${c.stream}`, `place:${c.name.toLowerCase()}|${c.lat}|${c.lon}`]
+        if (keys.some((k) => seen.has(k))) return false
+        for (const k of keys) seen.add(k)
+        return true
+      })
   })
   return entry.value
 }
 
-async function hostProblem(host: string, probe: string): Promise<string | null> {
-  const { entry } = await cached(`camera-host:${host}`, { ttl: 1800, swr: 1800, sie: 3600 }, async () => {
-    try {
-      const res = await fetch(probe, { signal: AbortSignal.timeout(6000) })
-      if (!res.ok) return `The camera server answers with an error (${res.status})`
-      const text = await res.text()
-      return text.includes('#EXTM3U') ? '' : 'The camera server sends no video'
-    } catch (error) {
-      const code = (error as { cause?: { code?: string } }).cause?.code ?? ''
-      if (code.includes('CERT')) return 'The camera server certificate has expired, so browsers block it'
-      return 'The camera server is not reachable right now'
-    }
-  })
-  return entry.value || null
+const PROBE_FRESH = 1800_000
+const PROBE_KEEP = 3 * 3600_000
+const PROBE_LIMIT = 8
+const probes = new Map<string, { problem: string; at: number }>()
+const probing = new Map<string, Promise<string>>()
+const waiting: (() => void)[] = []
+let active = 0
+
+async function limited<T>(job: () => Promise<T>): Promise<T> {
+  if (active < PROBE_LIMIT) active++
+  else await new Promise<void>((resolve) => waiting.push(resolve))
+  try {
+    return await job()
+  } finally {
+    const next = waiting.shift()
+    if (next) next()
+    else active--
+  }
+}
+
+function probeError(error: unknown): string {
+  const code = (error as { cause?: { code?: string } }).cause?.code ?? ''
+  if (code.includes('CERT')) return 'The camera server certificate has expired, so browsers block it'
+  return 'The camera server is not reachable right now'
+}
+
+async function checkPlaylist(url: string): Promise<string> {
+  const res = await fetch(url, { signal: AbortSignal.timeout(6000) })
+  if (!res.ok) return `The camera server answers with an error (${res.status})`
+  const text = await res.text()
+  return text.includes('#EXTM3U') ? '' : 'The camera server sends no video'
+}
+
+async function checkPage(url: string): Promise<string> {
+  const res = await fetch(url, { signal: AbortSignal.timeout(6000) })
+  if (!res.ok) return `The camera server answers with an error (${res.status})`
+  const playlist = /https?:\/\/[^"'\s]+\.m3u8[^"'\s]*/.exec(await res.text())
+  return playlist ? checkPlaylist(playlist[0]) : 'The camera server sends no video'
+}
+
+function probe(url: string, check: (url: string) => Promise<string>): Promise<string> {
+  const hit = probes.get(url)
+  const age = hit ? Date.now() - hit.at : Infinity
+  if (hit && age < PROBE_FRESH) return Promise.resolve(hit.problem)
+  let job = probing.get(url)
+  if (!job) {
+    job = limited(() => check(url).catch(probeError))
+      .then((problem) => {
+        probes.set(url, { problem, at: Date.now() })
+        return problem
+      })
+      .finally(() => probing.delete(url))
+    probing.set(url, job)
+  }
+  if (hit && age < PROBE_KEEP) {
+    waitUntil(job)
+    return Promise.resolve(hit.problem)
+  }
+  return job
 }
 
 export async function loadCameras(): Promise<Camera[]> {
   const [bm, sg, jg] = await Promise.allSettled([binamarga(), singapore(), jogja()])
   if (bm.status === 'rejected' && sg.status === 'rejected' && jg.status === 'rejected') throw bm.reason
-  const list: Camera[] = []
-  if (bm.status === 'fulfilled') {
-    const probes = new Map<string, string>()
-    for (const c of bm.value) if (c.feed !== 'apace' && c.stream.endsWith('.m3u8')) probes.set(new URL(c.stream).host, c.stream)
-    const problems = new Map<string, string | null>()
-    await Promise.all([...probes].map(async ([host, url]) => problems.set(host, await hostProblem(host, url))))
-    for (const { stream, feed, ...camera } of bm.value) {
-      const direct = feed !== 'apace' && stream.endsWith('.m3u8')
-      const problem = direct ? problems.get(new URL(stream).host) : null
-      list.push({ ...camera, stream: direct ? stream : undefined, online: camera.online && !problem, note: problem ?? undefined })
-    }
-  }
-  if (jg.status === 'fulfilled') list.push(...jg.value)
-  if (sg.status === 'fulfilled') list.push(...sg.value)
-  return list
+  const [bmList, jgList] = await Promise.all([
+    bm.status === 'fulfilled'
+      ? Promise.all(
+          bm.value.map(async ({ stream, feed, ...camera }): Promise<Camera> => {
+            const direct = feed !== 'apace' && stream.endsWith('.m3u8')
+            const problem = direct ? await probe(stream, checkPlaylist) : feed === 'its' ? await probe(stream, checkPage) : ''
+            return { ...camera, stream: direct ? stream : undefined, online: camera.online && !problem, note: problem || undefined }
+          }),
+        )
+      : [],
+    jg.status === 'fulfilled'
+      ? Promise.all(
+          jg.value.map(async (camera): Promise<Camera> => {
+            const { stream } = camera
+            if (!camera.online || !stream) return camera
+            const problem = await probe(stream, checkPlaylist)
+            return { ...camera, online: !problem, note: problem || undefined }
+          }),
+        )
+      : [],
+  ])
+  return [...bmList, ...jgList, ...(sg.status === 'fulfilled' ? sg.value : [])]
 }
 
 export async function resolveStream(id: string): Promise<Stream> {

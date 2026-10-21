@@ -25,9 +25,6 @@ function HlsVideo({ url, title, onState }: { url: string; title: string; onState
     el.addEventListener('loadeddata', playing)
     el.addEventListener('canplay', playing)
     el.addEventListener('error', failed)
-    const timeout = setTimeout(() => {
-      if (el.readyState < 2) failed()
-    }, 25_000)
 
     if (el.canPlayType('application/vnd.apple.mpegurl')) {
       el.src = url
@@ -49,7 +46,6 @@ function HlsVideo({ url, title, onState }: { url: string; title: string; onState
 
     return () => {
       destroyed = true
-      clearTimeout(timeout)
       el.removeEventListener('playing', playing)
       el.removeEventListener('loadeddata', playing)
       el.removeEventListener('canplay', playing)
@@ -63,7 +59,23 @@ function HlsVideo({ url, title, onState }: { url: string; title: string; onState
   return <video ref={video} className={styles.media} muted playsInline autoPlay controls aria-label={title} />
 }
 
-export function CameraPlayer({ id, title, image, page, stream: direct, note }: { id: string; title: string; image?: string; page?: string; stream?: string; note?: string }) {
+export function CameraPlayer({
+  id,
+  title,
+  image,
+  page,
+  stream: direct,
+  note,
+  onFailedChange,
+}: {
+  id: string
+  title: string
+  image?: string
+  page?: string
+  stream?: string
+  note?: string
+  onFailedChange?: (failed: boolean) => void
+}) {
   const [state, setState] = useState<PlayState>('loading')
   const needsResolve = !image && !direct && !note
   const { data, isError } = useQuery({
@@ -74,10 +86,16 @@ export function CameraPlayer({ id, title, image, page, stream: direct, note }: {
     meta: { persist: true },
   })
 
-  useEffect(() => setState('loading'), [id])
+  useEffect(() => {
+    setState('loading')
+    const watchdog = setTimeout(() => setState((s) => (s === 'loading' ? 'failed' : s)), 15_000)
+    return () => clearTimeout(watchdog)
+  }, [id])
 
   const stream: Stream | undefined = image ? { kind: 'image', url: image } : direct ? { kind: 'hls', url: direct } : data?.items
   const failed = !!note || isError || state === 'failed' || stream?.kind === 'page'
+
+  useEffect(() => onFailedChange?.(failed), [failed, onFailedChange])
 
   return (
     <figure className={styles.frame}>

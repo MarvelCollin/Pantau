@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import type { FeatureCollection } from 'geojson'
 import { formatCoord } from '../lib/format'
 import { useLayerOn } from '../state/store'
@@ -84,16 +84,17 @@ function CamerasLayer() {
 
 function CameraDetail({ id }: { id: string }) {
   const { data } = useCameras()
+  const [failed, setFailed] = useState(false)
   const c = data?.items.find((i) => i.id === id)
-  if (!c) return <Gone layer="cameras" />
+  if (!c) return <Gone layer="cameras" loading={!data} />
 
   return (
     <>
       <DetailHeader layer="cameras" title={c.name} subtitle={[c.area, c.source].filter(Boolean).join(', ')} />
-      <CameraPlayer id={c.id} title={c.name} image={c.image} page={c.page} stream={c.stream} note={c.note} />
+      <CameraPlayer id={c.id} title={c.name} image={c.image} page={c.page} stream={c.stream} note={c.note} onFailedChange={setFailed} />
       <Facts
         rows={[
-          ['Status', c.online ? 'Online' : (c.note ?? 'Listed as offline by the operator')],
+          ['Status', c.online ? (failed ? 'Listed online, but not answering right now' : 'Online') : (c.note ?? 'Listed as offline by the operator')],
           ['Operator', c.source === 'Bina Marga' ? 'Ministry of Public Works, Bina Marga' : c.source === 'Jogja City' ? 'Yogyakarta City Government' : 'Land Transport Authority, Singapore'],
           ['Location', <span className="num">{formatCoord(c.lat, c.lon)}</span>],
         ]}
