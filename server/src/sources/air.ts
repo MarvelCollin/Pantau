@@ -36,6 +36,21 @@ const categories: Record<string, AirCategory> = {
   BERBAHAYA: 'hazardous',
 }
 
+const WITA = ['bali', 'nusa tenggara', 'kalimantan selatan', 'kalimantan timur', 'kalimantan utara', 'sulawesi', 'gorontalo']
+const WIT = ['maluku', 'papua']
+
+function zoneHoursAhead(province: string): number {
+  const p = province.toLowerCase()
+  if (WIT.some((z) => p.includes(z))) return 2
+  if (WITA.some((z) => p.includes(z))) return 1
+  return 0
+}
+
+function readingTime(raw: string, province: string, now: number): number {
+  const time = Date.parse(`${raw.trim().replace(' ', 'T')}+07:00`)
+  return time > now ? time - zoneHoursAhead(province) * 3600_000 : time
+}
+
 function categoryFor(ispu: number): AirCategory {
   if (ispu <= 50) return 'good'
   if (ispu <= 100) return 'moderate'
@@ -50,12 +65,13 @@ export async function loadAir(): Promise<AirStation[]> {
 
   const out: AirStation[] = []
   const seen = new Set<string>()
+  const now = Date.now()
   for (const f of body.features) {
     const p = f.properties
     const lon = Number(f.geometry?.coordinates?.[0])
     const lat = Number(f.geometry?.coordinates?.[1])
     const ispu = Number(p?.nilai ?? p?.val)
-    const time = Date.parse(`${(p?.waktu ?? '').trim().replace(' ', 'T')}+07:00`)
+    const time = readingTime(p?.waktu ?? '', p?.provinsi ?? '', now)
     if (!p || !Number.isFinite(lat) || !Number.isFinite(lon) || !Number.isFinite(ispu) || ispu < 0 || !Number.isFinite(time)) continue
     const id = `${round(lat, 4)},${round(lon, 4)}`
     if (seen.has(id)) continue
