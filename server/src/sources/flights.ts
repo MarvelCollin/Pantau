@@ -1,5 +1,5 @@
 import { cached } from '../lib/cache.js'
-import { fetchJson, round } from '../lib/http.js'
+import { fetchJson, round, UpstreamError } from '../lib/http.js'
 import { attachRoutes, type FlightRoute } from './routes.js'
 
 export const CELL_DEG = 5
@@ -64,22 +64,81 @@ async function limited<T>(job: () => Promise<T>): Promise<T> {
   }
 }
 
+const LOL_RATE_COOLDOWN_MS = 120_000
+const LOL_ERROR_COOLDOWN_MS = 30_000
+const LOL_MAX_COOLDOWN_MS = 600_000
+let lolBlockedUntil = 0
+
+function lolOpen(): boolean {
+  return Date.now() >= lolBlockedUntil
+}
+
+function tripLol(error: unknown) {
+  const status = error instanceof UpstreamError ? error.status : 504
+  const hinted = error instanceof UpstreamError && error.retryAfterSec !== undefined ? error.retryAfterSec * 1000 : undefined
+  const base = status === 429 ? LOL_RATE_COOLDOWN_MS : LOL_ERROR_COOLDOWN_MS
+  const ms = Math.min(LOL_MAX_COOLDOWN_MS, Math.max(hinted ?? base, status === 429 ? LOL_ERROR_COOLDOWN_MS : 5_000))
+  const until = Date.now() + ms
+  if (until <= lolBlockedUntil) return
+  const wasOpen = lolOpen()
+  lolBlockedUntil = until
+  if (wasOpen) console.warn(JSON.stringify({ event: 'adsb_lol_cooldown', status, seconds: Math.round(ms / 1000) }))
+}
+
+async function fromLol<T>(url: string): Promise<T> {
+  if (!lolOpen()) throw new UpstreamError('adsb.lol', 429)
+  try {
+    return await fetchJson<T>('adsb.lol', url, { timeoutMs: 6000 })
+  } catch (error) {
+    tripLol(error)
+    throw error
+  }
+}
+
+const FI_GAP_MS = 1100
+const FI_RETRY_MAX_MS = 3000
+let fiNextAt = 0
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+async function fiTurn() {
+  const now = Date.now()
+  const at = Math.max(now, fiNextAt)
+  fiNextAt = at + FI_GAP_MS
+  if (at > now) await sleep(at - now)
+}
+
+async function fromFi<T>(url: string): Promise<T> {
+  await fiTurn()
+  try {
+    return await fetchJson<T>('adsb.fi', url, { timeoutMs: 6000 })
+  } catch (error) {
+    if (!(error instanceof UpstreamError) || error.status !== 429) throw error
+    const wait = Math.min(FI_RETRY_MAX_MS, Math.max(FI_GAP_MS, (error.retryAfterSec ?? 2) * 1000))
+    fiNextAt = Math.max(fiNextAt, Date.now() + wait)
+    await fiTurn()
+    return fetchJson<T>('adsb.fi', url, { timeoutMs: 6000 })
+  }
+}
+
 function point(lat: number, lon: number): Promise<ReadsbResponse> {
   return limited(() => pointDirect(lat, lon))
 }
 
 async function pointDirect(lat: number, lon: number): Promise<ReadsbResponse> {
-  try {
-    return await fetchJson<ReadsbResponse>('adsb.lol', `https://api.adsb.lol/v2/point/${lat}/${lon}/${RADIUS_NM}`, { timeoutMs: 6000 })
-  } catch {
-    return fetchJson<ReadsbResponse>('adsb.fi', `https://opendata.adsb.fi/api/v2/lat/${lat}/lon/${lon}/dist/${RADIUS_NM}`, { timeoutMs: 6000 })
+  if (lolOpen()) {
+    const res = await fromLol<ReadsbResponse>(`https://api.adsb.lol/v2/point/${lat}/${lon}/${RADIUS_NM}`).catch(() => null)
+    if (res) return res
   }
+  return fromFi<ReadsbResponse>(`https://opendata.adsb.fi/api/v2/lat/${lat}/lon/${lon}/dist/${RADIUS_NM}`)
 }
 
 async function militaryHexes(): Promise<Set<string>> {
   try {
     const { entry } = await cached('flights:mil', { ttl: 120, swr: 600, sie: 3600 }, async () => {
-      const res = await fetchJson<ReadsbResponse>('adsb.lol', 'https://api.adsb.lol/v2/mil', { timeoutMs: 6000 })
+      const res = await fromLol<ReadsbResponse>('https://api.adsb.lol/v2/mil')
       return (res.ac ?? []).map((a) => a.hex)
     })
     return new Set(entry.value)
