@@ -185,7 +185,7 @@ function ReportDetail({ report: r }: { report: CrewReport }) {
 function FireCrewDetail({ id }: { id: string }) {
   const { data } = useFireCrews()
   const payload = data?.items
-  if (!payload) return <Gone layer="firecrews" />
+  if (!payload) return <Gone layer="firecrews" loading />
   if (id.startsWith('post:')) {
     const post = payload.posts.find((p) => `post:${p.id}` === id)
     return post ? <PostDetail post={post} reports={payload.reports} /> : <Gone layer="firecrews" />

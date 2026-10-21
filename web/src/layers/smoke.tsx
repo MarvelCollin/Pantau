@@ -405,7 +405,7 @@ function SmokeDetail({ id }: { id: string }) {
   const { data } = useSmoke()
   const payload = data?.items
   const p = payload?.plumes.find((i) => i.id === id)
-  if (!payload || !p) return <Gone layer="smoke" />
+  if (!payload || !p) return <Gone layer="smoke" loading={!payload} />
   const start = payload.start * 1000
   const end = p.path[p.path.length - 1]
   const travelled = distanceKm(p.path[0], end)

@@ -147,7 +147,7 @@ function ShipsLayer() {
 function ShipDetail({ id }: { id: string }) {
   const { data } = useShips()
   const s = data?.items.find((i) => String(i.mmsi) === id)
-  if (!s) return <Gone layer="ships" />
+  if (!s) return <Gone layer="ships" loading={!data} />
 
   return (
     <>

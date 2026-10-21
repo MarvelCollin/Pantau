@@ -68,7 +68,8 @@ export function Section({ children }: { children: ReactNode }) {
   return <div className={styles.section}>{children}</div>
 }
 
-export function Gone({ layer }: { layer: LayerId }) {
+export function Gone({ layer, loading }: { layer: LayerId; loading?: boolean }) {
+  if (loading) return <DetailHeader layer={layer} title="Loading" />
   return (
     <>
       <DetailHeader layer={layer} title="Not in view anymore" />

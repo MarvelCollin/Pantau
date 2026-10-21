@@ -111,7 +111,7 @@ function AirLayer() {
 function AirDetail({ id }: { id: string }) {
   const { data } = useAir()
   const s = data?.items.find((i) => i.id === id)
-  if (!s) return <Gone layer="air" />
+  if (!s) return <Gone layer="air" loading={!data} />
   const cat = airCategories[s.category]
   const here: [number, number] = [s.lon, s.lat]
   const near = data!.items

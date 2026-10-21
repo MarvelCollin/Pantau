@@ -120,7 +120,7 @@ function QuakesLayer() {
 function QuakeDetail({ id }: { id: string }) {
   const { data } = useQuakes()
   const q = data?.items.find((i) => i.id === id)
-  if (!q) return <Gone layer="quakes" />
+  if (!q) return <Gone layer="quakes" loading={!data} />
 
   return (
     <>

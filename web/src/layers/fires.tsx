@@ -76,7 +76,7 @@ function FiresLayer() {
 function FireDetail({ id }: { id: string }) {
   const { data } = useFires()
   const f = data?.items.find((i) => fireId(i) === id)
-  if (!f) return <Gone layer="fires" />
+  if (!f) return <Gone layer="fires" loading={!data} />
   const time = f[4] * 1000
   const here: [number, number] = [f[1], f[0]]
   const cluster = data!.items.filter((o) => Math.abs(o[0] - f[0]) < 0.1 && Math.abs(o[1] - f[1]) < 0.1 && distanceKm([o[1], o[0]], here) <= 10)

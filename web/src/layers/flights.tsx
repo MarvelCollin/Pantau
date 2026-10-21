@@ -323,7 +323,7 @@ function FlightsLayer() {
   return null
 }
 
-function useFlight(hex: string): { flight?: Flight; fetchedAt?: number; lost?: boolean } {
+function useFlight(hex: string): { flight?: Flight; fetchedAt?: number; lost?: boolean; loading?: boolean } {
   const client = useQueryClient()
   const [, force] = useState(0)
   useEffect(
@@ -334,14 +334,15 @@ function useFlight(hex: string): { flight?: Flight; fetchedAt?: number; lost?: b
     [client],
   )
   let best: { flight: Flight; fetchedAt: number } | undefined
-  for (const q of client.getQueryCache().findAll({ queryKey: ['flights'] })) {
+  const queries = client.getQueryCache().findAll({ queryKey: ['flights'] })
+  for (const q of queries) {
     const env = q.state.data as Envelope<Flight[]> | undefined
     const f = env?.items.find((i) => i.hex === hex)
     if (f && env && (!best || env.fetchedAt > best.fetchedAt)) best = { flight: f, fetchedAt: env.fetchedAt }
   }
   if (best) return best
   const last = lastSeen.get(hex)
-  return last ? { flight: last.flight, fetchedAt: last.at, lost: true } : {}
+  return last ? { flight: last.flight, fetchedAt: last.at, lost: true } : { loading: !queries.some((q) => q.state.data) }
 }
 
 function phase(f: Flight, route?: Route): string | undefined {
@@ -400,13 +401,13 @@ function RouteBlock({ route, flight }: { route: Route; flight: Flight }) {
 }
 
 function FlightDetail({ id }: { id: string }) {
-  const { flight: f, fetchedAt, lost } = useFlight(id)
+  const { flight: f, fetchedAt, lost, loading } = useFlight(id)
   const fallback = useRoute(f && !f.route ? f.callsign : undefined)
   const route = { data: resolveRoute(f, fallback.data) }
   const photo = usePhoto(id)
   const follow = useStore((s) => s.followFlight)
   const setFollow = useStore((s) => s.setFollowFlight)
-  if (!f) return <Gone layer="flights" />
+  if (!f) return <Gone layer="flights" loading={loading} />
   const number = flightNumber(f.callsign)
   const status = phase(f, route.data)
   const title = number ?? f.callsign ?? f.reg ?? f.hex.toUpperCase()

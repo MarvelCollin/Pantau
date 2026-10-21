@@ -185,7 +185,7 @@ function Report({ code, name }: { code: string; name: string }) {
 function VolcanoDetail({ id }: { id: string }) {
   const { data } = useVolcanoes()
   const v = data?.items.find((i) => i.code === id)
-  if (!v) return <Gone layer="volcanoes" />
+  if (!v) return <Gone layer="volcanoes" loading={!data} />
   const level = levelNames[v.level]
 
   return (

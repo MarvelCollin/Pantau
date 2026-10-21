@@ -90,7 +90,7 @@ function ReportsLayer() {
 function ReportDetail({ id }: { id: string }) {
   const { data } = useReports()
   const r = data?.items.find((i) => i.id === id)
-  if (!r) return <Gone layer="reports" />
+  if (!r) return <Gone layer="reports" loading={!data} />
 
   return (
     <>
